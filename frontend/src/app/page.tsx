@@ -1,0 +1,626 @@
+"use client";
+
+// npm run dev - запустить сервер
+
+import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  ResponsiveContainer,
+} from "recharts";
+
+import DashboardCards from "@/components/DashboardCards";
+
+content: {
+  "./src/app/**/*.{js, ts, jsx,tsx}"
+}
+
+type Category = {
+  id: number;
+  name: string;
+};
+
+type ExpenseItem = {
+  id: number;
+  title: string;
+  amount: number;
+  created_at: string;
+  category: {
+    name: string;
+  };
+};
+
+type BudgetStatus = {
+  category: string;
+  budget: number;
+  spent: number;
+  percent: number;
+};
+
+export default function Page() {
+  const today = new Date().toISOString().split("T")[0];
+
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [createdAt, setCreatedAt] = useState(today);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("month_to_date");
+  const [summaryData, setSummaryData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [balanceData, setBalanceData] = useState<any>(null);
+  const [period, setPeriod] = useState("month");
+  const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
+
+  const API = "http://localhost:8000";
+
+  const PERIOD = [
+    { id: "day", title: "DAY" },
+    { id: "week", title: "WEEK" },
+    { id: "week_to_date", title: "WTD" },
+    { id: "month", title: "MNT" },
+    { id: "month_to_day", title: "MTD" },
+    { id: "year", title: "YR" },
+    { id: "year_to_day", title: "YTD" },
+    { id: "custom", title: "Other" },
+  ]
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const getBudgetBarColor = (percent: number) => {
+    if (percent > 100) {
+      return "bg-red-500";
+    }
+
+    if (percent >= 80) {
+      return "bg-yellow-500";
+    }
+
+    return "bg-green-500";
+  }
+
+  //=====ЗАГРУЗКА ДАННЫХ=====
+
+  // загрузка списка категорий
+  const fetchExpenses = async () => {
+    const params = new URLSearchParams();
+
+    if (startDate) {
+      params.append("start_date", startDate);
+    };
+
+    if (endDate) {
+      params.append("end_date", endDate);
+    };
+
+    const res = await fetch(
+      `${API}/expenses/list?${params.toString()}`
+    );
+    const data = await res.json();
+    setExpenses(Array.isArray(data) ? data : []);
+  };
+
+  // загрузка категорий
+  const fetchCategories = async () => {
+    const res = await fetch(`${API}/categories`);
+    const data = await res.json();
+    setCategories(Array.isArray(data) ? data : []);
+  };
+
+  // загрузка данных для графика
+  const fetchChart = async () => {
+    const params = new URLSearchParams();
+
+    if (startDate) {
+      params.append("start_date", startDate);
+    };
+
+    if (endDate) {
+      params.append("end_date", endDate);
+    };
+
+    const res = await fetch(
+      `${API}/expenses/daily?${params.toString()}`
+    );
+    const data = await res.json();
+    setChartData(Array.isArray(data) ? data : []);
+  };
+
+  // загрузка итогов по категориям
+  const fetchSummary = async () => {
+    const params = new URLSearchParams();
+
+    if (startDate) {
+      params.append("start_date", startDate);
+    };
+
+    if (endDate) {
+      params.append("end_date", endDate);
+    };
+
+    const res = await fetch(
+      `${API}/expenses/summary?${params.toString()}`
+    );
+    const data = await res.json();
+    setSummaryData(Array.isArray(data) ? data : []);
+  };
+
+  // фильтр по датам
+  const fetchStats = async () => {
+    const params = new URLSearchParams();
+
+    if (startDate) {
+      params.append("start_date", startDate);
+    };
+
+    if (endDate) {
+      params.append("end_date", endDate);
+    };
+
+    const res = await fetch(
+      `${API}/expenses/stats?${params.toString()}`
+    );
+    const data = await res.json();
+
+    setStats(data);
+  };
+
+  // загрузка баланса
+  const fetchBalance = async () => {
+    const res = await fetch(
+      `${API}/balance`
+    );
+
+    const data = await res.json();
+
+    setBalanceData(data);
+  }
+
+  // загрузка бюджета
+  const fetchBudgetStatus = async () => {
+    try {
+      const params = new URLSearchParams();
+
+      if (startDate) {
+        params.append("start_date", startDate);
+      }
+
+      if (endDate) {
+        params.append("end_date", endDate);
+      }
+
+      const url = `${API}/budgets/status?${params.toString()}`;
+
+      console.log("Budget status URL:", url);
+
+      const res = await fetch(url);
+
+      console.log("Budget status response:", res);
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      console.log("Budget status data:", data);
+
+      if (Array.isArray(data)) {
+        setBudgetStatus(data);
+      } else {
+        setBudgetStatus([]);
+      }
+    } catch (error) {
+      console.error("fetchBudgetStatus error:", error);
+      setBudgetStatus([]);
+    }
+  };
+
+  // вычисление дат для фильтра кнопками
+  const applyPeriod = (period: string) => {
+    const today = new Date();
+
+    let start = "";
+    let end = today.toISOString().split("T")[0];
+
+    switch (period) {
+      case "today":
+        start = end;
+        break;
+
+      case "week":
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+
+        start = weekAgo.toISOString().split("T")[0]
+        break;
+
+      case "month":
+        start = `${today.getFullYear()}-${String(
+          today.getMonth() + 1
+        ).padStart(2, "0")}-01`;
+        break;
+
+      case "year":
+        start = `${today.getFullYear()}-01-01`;
+        break;
+
+      case "all":
+        start = "";
+        end = "";
+        break;
+    }
+
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    fetchExpenses();
+    fetchChart();
+    fetchSummary();
+    fetchStats();
+    fetchBalance();
+    fetchBudgetStatus();
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    applyPeriod(period);
+  }, [period]);
+
+
+  const COLORS = [
+    "#3BB2F6",
+    "#10B981",
+    "#F59E0B",
+    "#EF4444",
+    "#8B5CF6",
+    "#EC4899",
+  ];
+
+
+  //======ДОБАВЛЕНИЕ=====
+  const addExpense = async () => {
+    if (!title || !amount || !categoryId) {
+      alert("заполни все поля");
+      return;
+    };
+
+    await fetch(`${API}/expenses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        amount: parseFloat(amount),
+        category_id: Number(categoryId),
+        created_at: createdAt,
+      }),
+    });
+
+    setTitle("");
+    setAmount("");
+    setCategoryId("");
+
+    // обновляем график
+    fetchExpenses();
+    fetchChart();
+    fetchSummary();
+  };
+
+  //=====УДАЛЕНИЕ=====
+  const deleteExpense = async (id: number) => {
+    await fetch(`${API}/expenses/${id}`, {
+      method: "DELETE",
+    });
+
+    fetchExpenses();
+    fetchChart();
+    fetchSummary();
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-6">
+      {/* HEADER */}
+      <h1 className="text-3xl font-bold mb-6">Finance AI Dashboard</h1>
+
+
+      {/* CARDS */}
+      <DashboardCards
+        stats={stats}
+        balance={balanceData}
+        formatCurrency={formatCurrency}
+      />
+
+      {/* Форма */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* LEFT - CHART */}
+        <div className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto">
+          {/* График */}
+          <h2 className="text-lg font-semibold mb-4">Daily Expenses</h2>
+          {/* FILTERS */}
+          <div className="flex items-end gap-4 mb-6">
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">
+                Start Date
+              </label>
+
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border p-2 rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">
+                End Date
+              </label>
+
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border p-2 rounded"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* FILTERS BUTTONS */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <button onClick={() => setPeriod("today")}>
+              Today
+            </button>
+
+            <button onClick={() => setPeriod("week")}>
+              Week
+            </button>
+
+            <button onClick={() => setPeriod("month")}>
+              Month
+            </button>
+
+            <button onClick={() => setPeriod("year")}>
+              Year
+            </button>
+
+            <button onClick={() => setPeriod("all")}>
+              All
+            </button>
+          </div>
+
+          <div className="w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monoton" dataKey="total" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold mb-4">
+              Expenses by Category
+            </h2>
+
+            <div className="flex flex-col xl:flex-row items-center gap-10">
+              <div className="w-full h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={summaryData.map((item, index) => ({
+                        ...item,
+                        fill: COLORS[index % COLORS.length],
+                        total: Number(item.total),
+                      }))}
+                      dataKey="total"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#3B82F6"
+                      isAnimationActive={false}
+                    />
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="space-y-2">
+                {summaryData.map((item, index) => (
+                  <div
+                    key={item.category}
+                    className="flex items-center gap-2"
+                  >
+                    <div
+                      className="w-4 h-4 rounded"
+                      style={{
+                        backgroundColor:
+                          COLORS[index % COLORS.length],
+                      }}
+                    />
+                    <div className="capitalize whitespace-nowrap">
+                      {item.category}
+                    </div>
+                    <div className="font-semibold whitespace-nowrap">
+                      ${formatCurrency(item.total)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* BUDGET */}
+          <div className="mt-8 bg-white p-4 rounded-xl shadow">
+            <h2 className="text-lg font-semibold mb-4">
+              Category Budgets
+            </h2>
+
+            {budgetStatus.length === 0 ? (
+              <div className="text-gray-500 text-sm">
+                No budgets yet
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {budgetStatus.map((item) => {
+                  const barWidth = Math.min(item.percent, 100);
+
+                  return (
+                    <div key={item.category}>
+                      <div className="flex item-center justify-between mb-1 gap-4">
+                        <div className="font-medium capitalize">
+                          {item.category}
+                        </div>
+
+                        <div className="text-sm text-gray-600 whitespace-nowrap">
+                          ${formatCurrency(item.spent)} / ${formatCurrency(item.budget)} (
+                          {item.percent}%)
+                        </div>
+                      </div>
+
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div className={`h-3 rounded-full ${getBudgetBarColor(item.percent)}`}
+                          style={{
+                            width: `${barWidth}%`,
+                          }}
+                        />
+                      </div>
+
+                      {item.percent > 100 && (
+                        <div className="text-xs text-red-500 mt-1">
+                          Budget exceeded
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT - FORM + LIST */}
+        <div className="space-y-6">
+          {/* ADD FORM */}
+          <div className="bg-white p-4 rounded-xl shadow">
+            <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
+
+            <input
+              className="w-full mb-2 p-2 border rounded"
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+
+            <input
+              className="w-full mb-2 p-2 border rounded"
+              placeholder="Amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+
+            <select
+              className="w-full mb-2 p-2 border rounded"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">Select category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              className="w-full mb-2 p-2 border rounded"
+              type="date"
+              value={createdAt}
+              onChange={(e) => setCreatedAt(e.target.value)}
+            />
+
+            <button
+              onClick={addExpense}
+              className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            >
+              Add
+            </button>
+          </div>
+
+          {/* EXPENSE LIST */}
+          <div className="bg-white p-4 rounded-xl shadow max-h-[400px] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">Expenses</h2>
+
+            {expenses.map((e) => (
+              <div
+                key={e.id}
+                className="flex justify-between items-center border-b py-2"
+              >
+                <div>
+                  <div className="font-medium">{e.title}</div>
+                  <div className="text-sm text-gray-500">
+                    {e.category?.name}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {e.created_at.split("T")[0]}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div>${formatCurrency(e.amount)}</div>
+
+                  <button
+                    onClick={() => deleteExpense(e.id)}
+                    className="text-red-500"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
