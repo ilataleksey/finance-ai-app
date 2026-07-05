@@ -16,6 +16,8 @@ import {
 } from "recharts";
 
 import DashboardCards from "@/components/DashboardCards";
+import { apiFetch } from "@/services/api";
+import { buildDateParams } from "@/utils/dateParams";
 
 content: {
   "./src/app/**/*.{js, ts, jsx,tsx}"
@@ -55,14 +57,11 @@ export default function Page() {
   const [createdAt, setCreatedAt] = useState(today);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("month_to_date");
   const [summaryData, setSummaryData] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [balanceData, setBalanceData] = useState<any>(null);
   const [period, setPeriod] = useState("month");
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
-
-  const API = "http://localhost:8000";
 
   const PERIOD = [
     { id: "day", title: "DAY" },
@@ -98,136 +97,45 @@ export default function Page() {
 
   // загрузка списка категорий
   const fetchExpenses = async () => {
-    const params = new URLSearchParams();
-
-    if (startDate) {
-      params.append("start_date", startDate);
-    };
-
-    if (endDate) {
-      params.append("end_date", endDate);
-    };
-
-    const res = await fetch(
-      `${API}/expenses/list?${params.toString()}`
-    );
-    const data = await res.json();
+    const data = await apiFetch(`/expenses/list?${buildDateParams(startDate, endDate)}`);
     setExpenses(Array.isArray(data) ? data : []);
   };
 
   // загрузка категорий
   const fetchCategories = async () => {
-    const res = await fetch(`${API}/categories`);
-    const data = await res.json();
+    const data = await apiFetch(`/categories`);
     setCategories(Array.isArray(data) ? data : []);
   };
 
   // загрузка данных для графика
   const fetchChart = async () => {
-    const params = new URLSearchParams();
-
-    if (startDate) {
-      params.append("start_date", startDate);
-    };
-
-    if (endDate) {
-      params.append("end_date", endDate);
-    };
-
-    const res = await fetch(
-      `${API}/expenses/daily?${params.toString()}`
-    );
-    const data = await res.json();
+    const data = await apiFetch(`/expenses/daily?${buildDateParams(startDate, endDate)}`);
     setChartData(Array.isArray(data) ? data : []);
   };
 
   // загрузка итогов по категориям
   const fetchSummary = async () => {
-    const params = new URLSearchParams();
-
-    if (startDate) {
-      params.append("start_date", startDate);
-    };
-
-    if (endDate) {
-      params.append("end_date", endDate);
-    };
-
-    const res = await fetch(
-      `${API}/expenses/summary?${params.toString()}`
-    );
-    const data = await res.json();
+    const data = await apiFetch(`/expenses/summary?${buildDateParams(startDate, endDate)}`);
     setSummaryData(Array.isArray(data) ? data : []);
   };
 
   // фильтр по датам
   const fetchStats = async () => {
-    const params = new URLSearchParams();
-
-    if (startDate) {
-      params.append("start_date", startDate);
-    };
-
-    if (endDate) {
-      params.append("end_date", endDate);
-    };
-
-    const res = await fetch(
-      `${API}/expenses/stats?${params.toString()}`
-    );
-    const data = await res.json();
-
+    const data = await apiFetch(`/expenses/stats?${buildDateParams(startDate, endDate)}`);
     setStats(data);
   };
 
   // загрузка баланса
   const fetchBalance = async () => {
-    const res = await fetch(
-      `${API}/balance`
-    );
-
-    const data = await res.json();
-
+    const data = await apiFetch(`/balance`);
     setBalanceData(data);
   }
 
   // загрузка бюджета
   const fetchBudgetStatus = async () => {
-    try {
-      const params = new URLSearchParams();
+    const data = await apiFetch(`/budgets/status?${buildDateParams(startDate, endDate)}`);
 
-      if (startDate) {
-        params.append("start_date", startDate);
-      }
-
-      if (endDate) {
-        params.append("end_date", endDate);
-      }
-
-      const url = `${API}/budgets/status?${params.toString()}`;
-
-      console.log("Budget status URL:", url);
-
-      const res = await fetch(url);
-
-      console.log("Budget status response:", res);
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
-      }
-
-      const data = await res.json();
-
-      console.log("Budget status data:", data);
-
-      if (Array.isArray(data)) {
-        setBudgetStatus(data);
-      } else {
-        setBudgetStatus([]);
-      }
-    } catch (error) {
-      console.error("fetchBudgetStatus error:", error);
-      setBudgetStatus([]);
-    }
+    setBudgetStatus(Array.isArray(data) ? data : []);
   };
 
   // вычисление дат для фильтра кнопками
@@ -304,7 +212,7 @@ export default function Page() {
       return;
     };
 
-    await fetch(`${API}/expenses`, {
+    await apiFetch(`/expenses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -329,7 +237,7 @@ export default function Page() {
 
   //=====УДАЛЕНИЕ=====
   const deleteExpense = async (id: number) => {
-    await fetch(`${API}/expenses/${id}`, {
+    await apiFetch(`/expenses/${id}`, {
       method: "DELETE",
     });
 
