@@ -19,42 +19,29 @@ import DashboardCards from "@/components/DashboardCards";
 import { apiFetch } from "@/services/api";
 import { buildDateParams } from "@/utils/dateParams";
 import ExpenseForm from "@/components/ExpenseForm";
+import type {
+  Category,
+  ExpenseItem,
+  DailyExpense,
+  CategorySummary,
+  Stats,
+  Balance,
+  BudgetStatus,
+} from "@/types/api";
 
 content: {
   "./src/app/**/*.{js, ts, jsx,tsx}"
 }
 
-type Category = {
-  id: number;
-  name: string;
-};
-
-type ExpenseItem = {
-  id: number;
-  title: string;
-  amount: number;
-  created_at: string;
-  category: {
-    name: string;
-  };
-};
-
-type BudgetStatus = {
-  category: string;
-  budget: number;
-  spent: number;
-  percent: number;
-};
-
 export default function Page() {
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<DailyExpense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [summaryData, setSummaryData] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [balanceData, setBalanceData] = useState<any>(null);
+  const [summaryData, setSummaryData] = useState<CategorySummary[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [balanceData, setBalanceData] = useState<Balance | null>(null);
   const [period, setPeriod] = useState("month");
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
 
