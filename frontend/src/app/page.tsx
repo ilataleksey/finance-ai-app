@@ -47,15 +47,9 @@ type BudgetStatus = {
 };
 
 export default function Page() {
-  const today = new Date().toISOString().split("T")[0];
-
   const [chartData, setChartData] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState("");
   const [expenses, setExpenses] = useState<any[]>([]);
-  const [createdAt, setCreatedAt] = useState(today);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [summaryData, setSummaryData] = useState<any[]>([]);
@@ -182,13 +176,17 @@ export default function Page() {
     fetchCategories();
   }, []);
 
-  useEffect(() => {
+  const refreshData = () => {
     fetchExpenses();
     fetchChart();
     fetchSummary();
     fetchStats();
     fetchBalance();
     fetchBudgetStatus();
+  }
+
+  useEffect(() => {
+    refreshData();
   }, [startDate, endDate]);
 
   useEffect(() => {
@@ -205,46 +203,13 @@ export default function Page() {
     "#EC4899",
   ];
 
-
-  //======ДОБАВЛЕНИЕ=====
-  const addExpense = async () => {
-    if (!title || !amount || !categoryId) {
-      alert("заполни все поля");
-      return;
-    };
-
-    await apiFetch(`/expenses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        amount: parseFloat(amount),
-        category_id: Number(categoryId),
-        created_at: createdAt,
-      }),
-    });
-
-    setTitle("");
-    setAmount("");
-    setCategoryId("");
-
-    // обновляем график
-    fetchExpenses();
-    fetchChart();
-    fetchSummary();
-  };
-
   //=====УДАЛЕНИЕ=====
   const deleteExpense = async (id: number) => {
     await apiFetch(`/expenses/${id}`, {
       method: "DELETE",
     });
 
-    fetchExpenses();
-    fetchChart();
-    fetchSummary();
+    refreshData();
   }
 
   return (
@@ -445,53 +410,12 @@ export default function Page() {
 
         {/* RIGHT - FORM + LIST */}
         <div className="space-y-6">
+
           {/* ADD FORM */}
-          <ExpenseForm />
-          {/* <div className="bg-white p-4 rounded-xl shadow">
-            <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
-
-            <input
-              className="w-full mb-2 p-2 border rounded"
-              placeholder="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-
-            <input
-              className="w-full mb-2 p-2 border rounded"
-              placeholder="Amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-
-            <select
-              className="w-full mb-2 p-2 border rounded"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
-            <input
-              className="w-full mb-2 p-2 border rounded"
-              type="date"
-              value={createdAt}
-              onChange={(e) => setCreatedAt(e.target.value)}
-            />
-
-            <button
-              onClick={addExpense}
-              className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-            >
-              Add
-            </button>
-          </div> */}
+          <ExpenseForm
+            categories={categories}
+            onExpenseAdded={refreshData}
+          />
 
           {/* EXPENSE LIST */}
           <div className="bg-white p-4 rounded-xl shadow max-h-[400px] overflow-y-auto">
