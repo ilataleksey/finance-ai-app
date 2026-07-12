@@ -1,53 +1,36 @@
-import { useEffect, useState } from "react";
-import { apiFetch } from "@/services/api";
+import type { Category } from "@/types/api";
 
-type Category = {
-  id: number;
-  name: string;
-};
+type ExpenseFormProps = {
+  title: string;
+  amount: string;
+  categoryId: string;
+  createdAt: string;
 
-type Props = {
   categories: Category[];
-  onExpenseAdded: () => void;
+
+  setTitle: (value: string) => void;
+  setAmount: (value: string) => void;
+  setCategoryId: (value: string) => void;
+  setCreatedAt: (value: string) => void;
+
+  onSubmit: () => void;
 };
 
 export default function ExpenseForm({
+  title,
+  amount,
+  categoryId,
+  createdAt,
+
   categories,
-  onExpenseAdded,
-}: Props) {
-  const today = new Date().toISOString().split("T")[0];
 
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [createdAt, setCreatedAt] = useState(today);
+  setTitle,
+  setAmount,
+  setCategoryId,
+  setCreatedAt,
+  onSubmit,
+}: ExpenseFormProps) {
 
-  const addExpense = async () => {
-    if (!title || !amount || !categoryId) {
-      alert("заполни все поля");
-      return;
-    };
-
-    await apiFetch(`/expenses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        amount: parseFloat(amount),
-        category_id: Number(categoryId),
-        created_at: createdAt,
-      }),
-    });
-
-    setTitle("");
-    setAmount("");
-    setCategoryId("");
-
-    // обновляем график
-    onExpenseAdded();
-  };
 
   return (
     <div className="bg-white p-4 rounded-xl shadow">
@@ -89,7 +72,7 @@ export default function ExpenseForm({
       />
 
       <button
-        onClick={addExpense}
+        onClick={onSubmit}
         className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
       >
         Add

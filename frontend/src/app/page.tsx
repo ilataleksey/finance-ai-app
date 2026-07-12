@@ -46,6 +46,13 @@ export default function Page() {
   const [period, setPeriod] = useState("month");
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [createdAt, setCreatedAt] = useState(today);
+
   const PERIOD = [
     { id: "day", title: "DAY" },
     { id: "week", title: "WEEK" },
@@ -121,6 +128,55 @@ export default function Page() {
     setBudgetStatus(Array.isArray(data) ? data : []);
   };
 
+  const refreshData = async () => {
+    await Promise.all([
+      fetchExpenses(),
+      fetchChart(),
+      fetchSummary(),
+      fetchStats(),
+      fetchBalance(),
+      fetchBudgetStatus(),
+    ]);
+  };
+
+
+  const addExpense = async () => {
+    if (!title || !amount || !categoryId) {
+      alert("заполни все поля");
+      return;
+    };
+
+    await apiFetch(`/expenses`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title,
+        amount: parseFloat(amount),
+        category_id: Number(categoryId),
+        created_at: createdAt,
+      }),
+    });
+
+    setTitle("");
+    setAmount("");
+    setCategoryId("");
+
+    // обновляем график
+    refreshData();
+  };
+
+
+  //=====УДАЛЕНИЕ=====
+  const deleteExpense = async (id: number) => {
+    await apiFetch(`/expenses/${id}`, {
+      method: "DELETE",
+    });
+
+    refreshData();
+  }
+
   // вычисление дат для фильтра кнопками
   const applyPeriod = (period: string) => {
     const today = new Date();
@@ -164,15 +220,6 @@ export default function Page() {
     fetchCategories();
   }, []);
 
-  const refreshData = () => {
-    fetchExpenses();
-    fetchChart();
-    fetchSummary();
-    fetchStats();
-    fetchBalance();
-    fetchBudgetStatus();
-  }
-
   useEffect(() => {
     refreshData();
   }, [startDate, endDate]);
@@ -191,14 +238,6 @@ export default function Page() {
     "#EC4899",
   ];
 
-  //=====УДАЛЕНИЕ=====
-  const deleteExpense = async (id: number) => {
-    await apiFetch(`/expenses/${id}`, {
-      method: "DELETE",
-    });
-
-    refreshData();
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -364,7 +403,7 @@ export default function Page() {
 
                   return (
                     <div key={item.category}>
-                      <div className="flex item-center justify-between mb-1 gap-4">
+                      <div className="flex items-center justify-between mb-1 gap-4">
                         <div className="font-medium capitalize">
                           {item.category}
                         </div>
@@ -401,8 +440,19 @@ export default function Page() {
 
           {/* ADD FORM */}
           <ExpenseForm
+            title={title}
+            amount={amount}
+            categoryId={categoryId}
+            createdAt={createdAt}
+
             categories={categories}
-            onExpenseAdded={refreshData}
+
+            setTitle={setTitle}
+            setAmount={setAmount}
+            setCategoryId={setCategoryId}
+            setCreatedAt={setCreatedAt}
+
+            onSubmit={addExpense}
           />
 
           {/* EXPENSE LIST */}
