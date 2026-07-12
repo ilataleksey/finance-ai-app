@@ -18,6 +18,7 @@ import {
 import DashboardCards from "@/components/DashboardCards";
 import { apiFetch } from "@/services/api";
 import { buildDateParams } from "@/utils/dateParams";
+import ExpenseForm from "@/components/ExpenseForm";
 
 content: {
   "./src/app/**/*.{js, ts, jsx,tsx}"
@@ -445,7 +446,8 @@ export default function Page() {
         {/* RIGHT - FORM + LIST */}
         <div className="space-y-6">
           {/* ADD FORM */}
-          <div className="bg-white p-4 rounded-xl shadow">
+          <ExpenseForm />
+          {/* <div className="bg-white p-4 rounded-xl shadow">
             <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
 
             <input
@@ -489,7 +491,7 @@ export default function Page() {
             >
               Add
             </button>
-          </div>
+          </div> */}
 
           {/* EXPENSE LIST */}
           <div className="bg-white p-4 rounded-xl shadow max-h-[400px] overflow-y-auto">
