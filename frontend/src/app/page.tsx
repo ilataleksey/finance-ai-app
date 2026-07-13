@@ -21,6 +21,8 @@ import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import DateFilters from "@/components/DateFilters";
+import PeriodButtons from "@/components/PeriodButtons";
+import PeriodSelector from "@/components/PeriodSelector"
 import type {
   Category,
   ExpenseItem,
@@ -252,10 +254,12 @@ export default function Page() {
           <DateFilters
             startDate={startDate}
             endDate={endDate}
-            period={period}
 
             setStartDate={setStartDate}
             setEndDate={setEndDate}
+          />
+          <PeriodSelector
+            period={period}
             setPeriod={setPeriod}
           />
 
