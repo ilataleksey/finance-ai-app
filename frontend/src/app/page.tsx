@@ -20,6 +20,7 @@ import { buildDateParams } from "@/utils/dateParams";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
+import DateFilters from "@/components/DateFilters";
 import type {
   Category,
   ExpenseItem,
@@ -52,17 +53,6 @@ export default function Page() {
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [createdAt, setCreatedAt] = useState(today);
-
-  const PERIOD = [
-    { id: "day", title: "DAY" },
-    { id: "week", title: "WEEK" },
-    { id: "week_to_date", title: "WTD" },
-    { id: "month", title: "MNT" },
-    { id: "month_to_day", title: "MTD" },
-    { id: "year", title: "YR" },
-    { id: "year_to_day", title: "YTD" },
-    { id: "custom", title: "Other" },
-  ]
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString(undefined, {
@@ -259,66 +249,16 @@ export default function Page() {
           {/* График */}
           <h2 className="text-lg font-semibold mb-4">Daily Expenses</h2>
           {/* FILTERS */}
-          <div className="flex items-end gap-4 mb-6">
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">
-                Start Date
-              </label>
+          <DateFilters
+            startDate={startDate}
+            endDate={endDate}
+            period={period}
 
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border p-2 rounded"
-              />
-            </div>
+            setStartDate={setStartDate}
+            setEndDate={setEndDate}
+            setPeriod={setPeriod}
+          />
 
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">
-                End Date
-              </label>
-
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border p-2 rounded"
-              />
-            </div>
-
-            <button
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-            >
-              Reset
-            </button>
-          </div>
-
-          {/* FILTERS BUTTONS */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            <button onClick={() => setPeriod("today")}>
-              Today
-            </button>
-
-            <button onClick={() => setPeriod("week")}>
-              Week
-            </button>
-
-            <button onClick={() => setPeriod("month")}>
-              Month
-            </button>
-
-            <button onClick={() => setPeriod("year")}>
-              Year
-            </button>
-
-            <button onClick={() => setPeriod("all")}>
-              All
-            </button>
-          </div>
 
           <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
