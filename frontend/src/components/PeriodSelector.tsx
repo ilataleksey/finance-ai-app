@@ -1,53 +1,47 @@
+import type { PeriodId } from "@/utils/dateRange";
+
 type PeriodSelectorProps = {
-  period: string;
-  setPeriod: (value: string) => void;
+  period: PeriodId | null;
+  onChange: (period: PeriodId) => void;
 };
 
-export const PERIODS = [
+export const PERIODS: ReadonlyArray<{ id: PeriodId; title: string }> = [
   { id: "today", title: "Today" },
   { id: "week", title: "7 Days" },
   { id: "month", title: "Month" },
   { id: "year", title: "Year" },
   { id: "all", title: "All Time" },
-]
+];
 
 export default function PeriodSelector({
   period,
-  setPeriod,
+  onChange,
 }: PeriodSelectorProps) {
-
   return (
+    <div
+      aria-label="Quick date range"
+      className="inline-flex max-w-full overflow-x-auto rounded-xl bg-gray-100 p-1 shadow-inner"
+      role="group"
+    >
+      {PERIODS.map((item) => {
+        const isSelected = period === item.id;
 
-    <div className="inline-flex rounded-xl bg-gray-200 p-1">
-
-      {PERIODS.map((item) => (
-
+        return (
         <button
           key={item.id}
-          onClick={() => setPeriod(item.id)}
-          className={`
-                        px-4
-                        py-2
-                        rounded-lg
-                        transition-all
-                        duration-300
-                        ease-in-out
-
-                        ${period === item.id
-              ? "bg-blue-600 text-white shadow"
-              : "text-gray-700 hover:bg-gray-300"
-            }
-                    `}
+          type="button"
+          aria-pressed={isSelected}
+          onClick={() => onChange(item.id)}
+          className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-4 ${
+            isSelected
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-gray-700 hover:bg-white hover:text-gray-950"
+          }`}
         >
-
           {item.title}
-
         </button>
-
-      ))}
-
+        );
+      })}
     </div>
-
   );
-
 }

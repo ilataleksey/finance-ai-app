@@ -16,13 +16,14 @@ import {
 } from "recharts";
 
 import { apiFetch } from "@/services/api";
+import { formatLocalDate, getPeriodDateRange, type PeriodId } from "@/utils/dateRange";
 import { buildDateParams } from "@/utils/dateParams";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import DateFilters from "@/components/DateFilters";
-import PeriodButtons from "@/components/PeriodButtons";
-import PeriodSelector from "@/components/PeriodSelector"
+import PeriodSelector from "@/components/PeriodSelector";
+
 import type {
   Category,
   ExpenseItem,
@@ -33,28 +34,25 @@ import type {
   BudgetStatus,
 } from "@/types/api";
 
-content: {
-  "./src/app/**/*.{js, ts, jsx,tsx}"
-}
 
 export default function Page() {
   const [chartData, setChartData] = useState<DailyExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateRange, setDateRange] = useState(() => getPeriodDateRange("month"));
   const [summaryData, setSummaryData] = useState<CategorySummary[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [balanceData, setBalanceData] = useState<Balance | null>(null);
-  const [period, setPeriod] = useState("month");
+  const [period, setPeriod] = useState<PeriodId | null>("month");
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const today = new Date().toISOString().split("T")[0];
+  const { startDate, endDate } = dateRange;
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [createdAt, setCreatedAt] = useState(today);
+  const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString(undefined, {
@@ -74,63 +72,6 @@ export default function Page() {
 
     return "bg-green-500";
   }
-
-  //=====ЗАГРУЗКА ДАННЫХ=====
-
-  // загрузка списка категорий
-  const fetchExpenses = async () => {
-    const data = await apiFetch(`/expenses/list?${buildDateParams(startDate, endDate)}`);
-    setExpenses(Array.isArray(data) ? data : []);
-  };
-
-  // загрузка категорий
-  const fetchCategories = async () => {
-    const data = await apiFetch(`/categories`);
-    setCategories(Array.isArray(data) ? data : []);
-  };
-
-  // загрузка данных для графика
-  const fetchChart = async () => {
-    const data = await apiFetch(`/expenses/daily?${buildDateParams(startDate, endDate)}`);
-    setChartData(Array.isArray(data) ? data : []);
-  };
-
-  // загрузка итогов по категориям
-  const fetchSummary = async () => {
-    const data = await apiFetch(`/expenses/summary?${buildDateParams(startDate, endDate)}`);
-    setSummaryData(Array.isArray(data) ? data : []);
-  };
-
-  // фильтр по датам
-  const fetchStats = async () => {
-    const data = await apiFetch(`/expenses/stats?${buildDateParams(startDate, endDate)}`);
-    setStats(data);
-  };
-
-  // загрузка баланса
-  const fetchBalance = async () => {
-    const data = await apiFetch(`/balance`);
-    setBalanceData(data);
-  }
-
-  // загрузка бюджета
-  const fetchBudgetStatus = async () => {
-    const data = await apiFetch(`/budgets/status?${buildDateParams(startDate, endDate)}`);
-
-    setBudgetStatus(Array.isArray(data) ? data : []);
-  };
-
-  const refreshData = async () => {
-    await Promise.all([
-      fetchExpenses(),
-      fetchChart(),
-      fetchSummary(),
-      fetchStats(),
-      fetchBalance(),
-      fetchBudgetStatus(),
-    ]);
-  };
-
 
   const addExpense = async () => {
     if (!title || !amount || !categoryId) {
@@ -154,9 +95,7 @@ export default function Page() {
     setTitle("");
     setAmount("");
     setCategoryId("");
-
-    // обновляем график
-    refreshData();
+    setRefreshKey((key) => key + 1);
   };
 
 
@@ -166,59 +105,91 @@ export default function Page() {
       method: "DELETE",
     });
 
-    refreshData();
-  }
-
-  // вычисление дат для фильтра кнопками
-  const applyPeriod = (period: string) => {
-    const today = new Date();
-
-    let start = "";
-    let end = today.toISOString().split("T")[0];
-
-    switch (period) {
-      case "today":
-        start = end;
-        break;
-
-      case "week":
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-
-        start = weekAgo.toISOString().split("T")[0]
-        break;
-
-      case "month":
-        start = `${today.getFullYear()}-${String(
-          today.getMonth() + 1
-        ).padStart(2, "0")}-01`;
-        break;
-
-      case "year":
-        start = `${today.getFullYear()}-01-01`;
-        break;
-
-      case "all":
-        start = "";
-        end = "";
-        break;
-    }
-
-    setStartDate(start);
-    setEndDate(end);
+    setRefreshKey((key) => key + 1);
   };
 
   useEffect(() => {
-    fetchCategories();
+    const controller = new AbortController();
+
+    async function loadCategories() {
+      try {
+        const data = await apiFetch<Category[]>("/categories", {
+          signal: controller.signal,
+        });
+
+        if (!controller.signal.aborted) {
+          setCategories(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load categories", error);
+        }
+      }
+    }
+
+    void loadCategories();
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    refreshData();
-  }, [startDate, endDate]);
+    const controller = new AbortController();
+    const query = buildDateParams(startDate, endDate);
 
-  useEffect(() => {
-    applyPeriod(period);
-  }, [period]);
+    async function loadDashboardData() {
+      try {
+        const [
+          expensesData,
+          chartData,
+          summaryData,
+          statsData,
+          balanceData,
+          budgetStatusData,
+        ] = await Promise.all([
+          apiFetch<ExpenseItem[]>(`/expenses/list?${query}`, { signal: controller.signal }),
+          apiFetch<DailyExpense[]>(`/expenses/daily?${query}`, { signal: controller.signal }),
+          apiFetch<CategorySummary[]>(`/expenses/summary?${query}`, { signal: controller.signal }),
+          apiFetch<Stats>(`/expenses/stats?${query}`, { signal: controller.signal }),
+          apiFetch<Balance>("/balance", { signal: controller.signal }),
+          apiFetch<BudgetStatus[]>(`/budgets/status?${query}`, { signal: controller.signal }),
+        ]);
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setExpenses(Array.isArray(expensesData) ? expensesData : []);
+        setChartData(Array.isArray(chartData) ? chartData : []);
+        setSummaryData(Array.isArray(summaryData) ? summaryData : []);
+        setStats(statsData);
+        setBalanceData(balanceData);
+        setBudgetStatus(Array.isArray(budgetStatusData) ? budgetStatusData : []);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load dashboard data", error);
+        }
+      }
+    }
+
+    void loadDashboardData();
+
+    return () => controller.abort();
+  }, [endDate, refreshKey, startDate]);
+
+  const handlePeriodChange = (nextPeriod: PeriodId) => {
+    setPeriod(nextPeriod);
+    setDateRange(getPeriodDateRange(nextPeriod));
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setPeriod(null);
+    setDateRange((currentRange) => ({ ...currentRange, startDate: value }));
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setPeriod(null);
+    setDateRange((currentRange) => ({ ...currentRange, endDate: value }));
+  };
 
 
   const COLORS = [
@@ -254,13 +225,13 @@ export default function Page() {
           <DateFilters
             startDate={startDate}
             endDate={endDate}
-
-            setStartDate={setStartDate}
-            setEndDate={setEndDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            onReset={() => handlePeriodChange("all")}
           />
           <PeriodSelector
             period={period}
-            setPeriod={setPeriod}
+            onChange={handlePeriodChange}
           />
 
 
@@ -271,7 +242,7 @@ export default function Page() {
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monoton" dataKey="total" />
+                <Line type="monotone" dataKey="total" />
               </LineChart>
             </ResponsiveContainer>
           </div>
