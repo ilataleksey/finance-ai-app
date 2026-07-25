@@ -4,15 +4,10 @@
 
 import { useEffect, useState } from "react";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
   PieChart,
   Pie,
   ResponsiveContainer,
+  Tooltip,
 } from "recharts";
 
 import { apiFetch } from "@/services/api";
@@ -21,8 +16,7 @@ import { buildDateParams } from "@/utils/dateParams";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
-import DateFilters from "@/components/DateFilters";
-import PeriodSelector from "@/components/PeriodSelector";
+import ChartSection from "@/components/ChartSection";
 
 import type {
   Category,
@@ -99,7 +93,7 @@ export default function Page() {
   };
 
 
-  //=====УДАЛЕНИЕ=====
+  //=====DELETE=====
   const deleteExpense = async (id: number) => {
     await apiFetch(`/expenses/${id}`, {
       method: "DELETE",
@@ -219,35 +213,17 @@ export default function Page() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* LEFT - CHART */}
         <div className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto">
-          {/* График */}
-          <h2 className="text-lg font-semibold mb-4">Daily Expenses</h2>
-          {/* FILTERS */}
-          <DateFilters
+          {/* CHART */}
+          <ChartSection
+            chartData={chartData}
             startDate={startDate}
             endDate={endDate}
+            period={period}
             onStartDateChange={handleStartDateChange}
             onEndDateChange={handleEndDateChange}
             onReset={() => handlePeriodChange("all")}
+            onPeriodChange={handlePeriodChange}
           />
-          <PeriodSelector
-            period={period}
-            onChange={handlePeriodChange}
-          />
-
-
-          <div className="w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="total" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-
           <div className="mt-8">
             <h2 className="text-lg font-semibold mb-4">
               Expenses by Category
