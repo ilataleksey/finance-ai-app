@@ -3,12 +3,6 @@
 // npm run dev - запустить сервер
 
 import { useEffect, useState } from "react";
-import {
-  PieChart,
-  Pie,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
 
 import { apiFetch } from "@/services/api";
 import { formatLocalDate, getPeriodDateRange, type PeriodId } from "@/utils/dateRange";
@@ -17,6 +11,7 @@ import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import ChartSection from "@/components/ChartSection";
+import CategoryPieChart from "@/components/CategoryPieChart";
 
 import type {
   Category,
@@ -27,7 +22,6 @@ import type {
   Balance,
   BudgetStatus,
 } from "@/types/api";
-
 
 export default function Page() {
   const [chartData, setChartData] = useState<DailyExpense[]>([]);
@@ -186,16 +180,6 @@ export default function Page() {
   };
 
 
-  const COLORS = [
-    "#3BB2F6",
-    "#10B981",
-    "#F59E0B",
-    "#EF4444",
-    "#8B5CF6",
-    "#EC4899",
-  ];
-
-
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       {/* HEADER */}
@@ -224,58 +208,12 @@ export default function Page() {
             onReset={() => handlePeriodChange("all")}
             onPeriodChange={handlePeriodChange}
           />
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold mb-4">
-              Expenses by Category
-            </h2>
 
-            <div className="flex flex-col xl:flex-row items-center gap-10">
-              <div className="w-full h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={summaryData.map((item, index) => ({
-                        ...item,
-                        fill: COLORS[index % COLORS.length],
-                        total: Number(item.total),
-                      }))}
-                      dataKey="total"
-                      nameKey="category"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#3B82F6"
-                      isAnimationActive={false}
-                    />
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="space-y-2">
-                {summaryData.map((item, index) => (
-                  <div
-                    key={item.category}
-                    className="flex items-center gap-2"
-                  >
-                    <div
-                      className="w-4 h-4 rounded"
-                      style={{
-                        backgroundColor:
-                          COLORS[index % COLORS.length],
-                      }}
-                    />
-                    <div className="capitalize whitespace-nowrap">
-                      {item.category}
-                    </div>
-                    <div className="font-semibold whitespace-nowrap">
-                      ${formatCurrency(item.total)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          {/* PIE */}
+          <CategoryPieChart
+            summaryData={summaryData}
+            formatCurrency={formatCurrency}
+          />
 
           {/* BUDGET */}
           <div className="mt-8 bg-white p-4 rounded-xl shadow">
