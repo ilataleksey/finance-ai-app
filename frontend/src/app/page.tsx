@@ -258,6 +258,7 @@ export default function Page() {
             expenses={expenses}
             formatCurrency={formatCurrency}
             onDelete={deleteExpense}
+            isLoading={isDashboardLoading}
           />
 
         </div>
