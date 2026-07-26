@@ -35,6 +35,7 @@ export default function Page() {
   const [period, setPeriod] = useState<PeriodId | null>("month");
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isDashboardLoading, setIsDashboardLoading] = useState(true);
 
   const { startDate, endDate } = dateRange;
 
@@ -72,6 +73,7 @@ export default function Page() {
     setTitle("");
     setAmount("");
     setCategoryId("");
+    setIsDashboardLoading(true);
     setRefreshKey((key) => key + 1);
   };
 
@@ -81,7 +83,7 @@ export default function Page() {
     await apiFetch(`/expenses/${id}`, {
       method: "DELETE",
     });
-
+    setIsDashboardLoading(true);
     setRefreshKey((key) => key + 1);
   };
 
@@ -145,6 +147,10 @@ export default function Page() {
         if (!controller.signal.aborted) {
           console.error("Failed to load dashboard data", error);
         }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsDashboardLoading(false);
+        }
       }
     }
 
@@ -154,16 +160,19 @@ export default function Page() {
   }, [endDate, refreshKey, startDate]);
 
   const handlePeriodChange = (nextPeriod: PeriodId) => {
+    setIsDashboardLoading(true);
     setPeriod(nextPeriod);
     setDateRange(getPeriodDateRange(nextPeriod));
   };
 
   const handleStartDateChange = (value: string) => {
+    setIsDashboardLoading(true);
     setPeriod(null);
     setDateRange((currentRange) => ({ ...currentRange, startDate: value }));
   };
 
   const handleEndDateChange = (value: string) => {
+    setIsDashboardLoading(true);
     setPeriod(null);
     setDateRange((currentRange) => ({ ...currentRange, endDate: value }));
   };
@@ -185,7 +194,20 @@ export default function Page() {
       {/* Форма */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* LEFT - CHART */}
-        <div className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto">
+        <div
+          className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto"
+          aria-busy={isDashboardLoading}
+        >
+
+          {isDashboardLoading && (
+            <div
+              className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700"
+              role="status"
+            >
+              Updating dashboard...
+            </div>
+          )}
+
           {/* CHART */}
           <ChartSection
             chartData={chartData}
