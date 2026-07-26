@@ -224,6 +224,7 @@ export default function Page() {
           <CategoryPieChart
             summaryData={summaryData}
             formatCurrency={formatCurrency}
+            isLoading={isDashboardLoading}
           />
 
           {/* BUDGET */}
