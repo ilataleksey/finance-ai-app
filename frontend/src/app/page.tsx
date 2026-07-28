@@ -199,15 +199,6 @@ export default function Page() {
           aria-busy={isDashboardLoading}
         >
 
-          {isDashboardLoading && (
-            <div
-              className="mb-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700"
-              role="status"
-            >
-              Updating dashboard...
-            </div>
-          )}
-
           {/* CHART */}
           <ChartSection
             chartData={chartData}
@@ -265,6 +256,14 @@ export default function Page() {
 
         </div>
       </div>
+      {isDashboardLoading && (
+        <div
+          className="pointer-events-none fixed bottom-4 right-4 z-50 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg"
+          role="status"
+        >
+          Updating dashboard...
+        </div>
+      )}
     </div>
   );
 }
