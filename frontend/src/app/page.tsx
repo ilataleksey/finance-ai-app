@@ -214,6 +214,7 @@ export default function Page() {
             startDate={startDate}
             endDate={endDate}
             period={period}
+            isLoading={isDashboardLoading}
             onStartDateChange={handleStartDateChange}
             onEndDateChange={handleEndDateChange}
             onReset={() => handlePeriodChange("all")}

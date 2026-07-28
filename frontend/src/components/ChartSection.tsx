@@ -12,6 +12,7 @@ import DateFilters from "@/components/DateFilters";
 import PeriodSelector from "@/components/PeriodSelector";
 import type { PeriodId } from "@/utils/dateRange";
 import type { DailyExpense } from "@/types/api";
+import EmptyState from "./EmptyState";
 
 type ChartSectionProps = {
   chartData: DailyExpense[];
@@ -22,6 +23,7 @@ type ChartSectionProps = {
   onEndDateChange: (value: string) => void;
   onReset: () => void;
   onPeriodChange: (period: PeriodId) => void;
+  isLoading: boolean;
 };
 
 export default function ChartSection({
@@ -33,6 +35,7 @@ export default function ChartSection({
   onEndDateChange,
   onReset,
   onPeriodChange,
+  isLoading,
 }: ChartSectionProps) {
   return (
     <section>
@@ -53,15 +56,27 @@ export default function ChartSection({
       />
 
       <div className="w-full h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="total" />
-          </LineChart>
-        </ResponsiveContainer>
+        {isLoading ? null : chartData.length === 0 ? (
+          <div className="flex h-full items-center">
+            <div className="w-full">
+              <EmptyState
+                title="No expenses in this period"
+                description="Add an expense or select a different date range."
+              />
+            </div>
+          </div>
+        ) : (
+
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="total" />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </section>
   );
