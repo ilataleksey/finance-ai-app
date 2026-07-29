@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, UTC
 from database import Base
@@ -39,17 +39,28 @@ class Income(Base):
 class Budget(Base):
     __tablename__ = "budgets"
 
-    id = Column(Integer, primary_key=True, index=True)
+    __table_args__ = (
+        UniqueConstraint(
+            "category_id",
+            "year",
+            "month",
+            name="uq_budget_category_period",
+        ),
+    )
 
+    id = Column(Integer, primary_key=True, index=True)
     category_id = Column(
         Integer,
         ForeignKey("categories.id"),
-        unique=True,
+        nullable=False,
     )
-
-    year = Column(String)
-    month = Column(String)
-    amount = Column(Float)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    year = Column(Integer, nullable=False)
+    month = Column(Integer, nullable=False)
+    amount = Column(Float, nullable=False)
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
     category = relationship("Category", back_populates="budgets")

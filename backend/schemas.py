@@ -48,16 +48,19 @@ class IncomeResponse(BaseModel):
 
 
 class BudgetCreate(BaseModel):
-    category_id: int
-    amount: float
-    year: int
-    month: int
+    category_id: int = Field(gt=0)
+    amount: float = Field(gt=0)
+    year: int = Field(ge=2000, le=2100)
+    month: int = Field(ge=1, le=12)
 
 
 class BudgetResponse(BaseModel):
     id: int
     category_id: int
     amount: float
+    year: int
+    month: int
+    created_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,

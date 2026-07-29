@@ -366,28 +366,44 @@ def create_budget(
         budget: schemas.BudgetCreate,
         db: Session = Depends(get_db),
 ):
+    category = (
+        db.query(models.Category)
+        .filter(models.Category.id == budget.category_id)
+        .first()
+    )
+
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found",
+        )
+
     existing = (
         db.query(models.Budget)
-        .filter(models.Budget.category_id == budget.category_id).first()
+        .filter(
+            models.Budget.category_id == budget.category_id,
+            models.Budget.year == budget.year,
+            models.Budget.month == budget.month,
+        )
+        .first()
     )
 
     if existing:
         existing.amount = budget.amount
-
         db.commit()
         db.refresh(existing)
 
-        return  existing
+        return existing
 
     new_budget = models.Budget(
         category_id = budget.category_id,
         amount = budget.amount,
+        year = budget.year,
+        month = budget.month,
     )
 
     db.add(new_budget)
-
     db.commit()
-
     db.refresh(new_budget)
 
     return new_budget
