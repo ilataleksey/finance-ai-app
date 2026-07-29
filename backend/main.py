@@ -466,7 +466,6 @@ def get_budget_status(
                 "budget": budget,
                 "spent": spent,
                 "percent": percent,
-                "months": months,
             }
         )
 

@@ -68,4 +68,4 @@ class BudgetStatusResponse(BaseModel):
     category: str
     budget: float
     spent: float
-    percentage: float
+    percent: float
