@@ -35,6 +35,10 @@ function getPercentColor(percent: number): string {
   return "text-green-700";
 }
 
+function formatCategoryName(name: string): string {
+  return name ? `${name[0].toUpperCase()}${name.slice(1)}` : name;
+}
+
 export default function BudgetPlanTable({
   plan,
   savingCell,
@@ -46,6 +50,30 @@ export default function BudgetPlanTable({
   const [draftAmount, setDraftAmount] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isCommittingRef = useRef(false);
+  const monthlyTotals = MONTH_LABELS.map((_, monthIndex) => {
+    return plan.categories.reduce(
+      (totals, category) => {
+        const period = category.months[monthIndex];
+
+        return {
+          planned: totals.planned + (period.planned ?? 0),
+          actual: totals.actual + period.actual,
+        };
+      },
+      { planned: 0, actual: 0 },
+    );
+  });
+
+  const annualTotals = monthlyTotals.reduce(
+    (totals, month) => ({
+      planned: totals.planned + month.planned,
+      actual: totals.actual + month.actual,
+    }),
+    { planned: 0, actual: 0 },
+  );
+  const annualTotalsPercent = annualTotals.planned > 0
+    ? Math.round((annualTotals.actual / annualTotals.planned) * 10000) / 100
+    : null;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -146,6 +174,9 @@ export default function BudgetPlanTable({
               (total, period) => total + period.actual,
               0,
             );
+            const annualPercent = annualPlanned > 0
+              ? Math.round((annualActual / annualPlanned) * 10000) / 100
+              : null;
 
             return (
               <tr key={category.id} className="border-b border-gray-100 last:border-b-0">
@@ -153,7 +184,7 @@ export default function BudgetPlanTable({
                   scope="row"
                   className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 text-left font-medium text-gray-900"
                 >
-                  {category.name}
+                  {formatCategoryName(category.name)}
                 </th>
 
                 {months.map((period) => {
@@ -186,7 +217,7 @@ export default function BudgetPlanTable({
                             }
                           }}
                           disabled={isSaving}
-                          aria-label={`Budget for ${category.name} in ${MONTH_LABELS[period.month - 1]}`}
+                          aria-label={`Budget for ${formatCategoryName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
                           className="w-24 rounded border border-blue-500 px-2 py-1 text-right text-sm outline-none ring-2 ring-blue-100 disabled:cursor-wait disabled:opacity-60"
                         />
                       ) : (
@@ -194,7 +225,7 @@ export default function BudgetPlanTable({
                           type="button"
                           onClick={() => startEditing(category.id, period.month, period.planned)}
                           disabled={isSaving}
-                          aria-label={`Edit budget for ${category.name} in ${MONTH_LABELS[period.month - 1]}`}
+                          aria-label={`Edit budget for ${formatCategoryName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
                           className="min-h-7 rounded px-1 font-medium text-gray-900 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-60"
                         >
                           {isSaving
@@ -221,12 +252,69 @@ export default function BudgetPlanTable({
 
                 <td className="border-l border-gray-200 px-4 py-3 text-right align-top">
                   <div className="font-semibold text-gray-900">${formatCurrency(annualPlanned)}</div>
-                  <div className="mt-1 text-xs text-gray-500">Actual ${formatCurrency(annualActual)}</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Actual ${formatCurrency(annualActual)}
+                    {annualPercent !== null && (
+                      <span className={`ml-1 font-medium ${getPercentColor(annualPercent)}`}>
+                        {annualPercent}%
+                      </span>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
+
+        <tfoot className="bg-blue-50 text-sm">
+          <tr>
+            <th
+              scope="row"
+              className="sticky left-0 z-10 border-r border-t border-blue-100 bg-blue-50 px-4 py-3 text-left font-semibold text-gray-900"
+            >
+              Monthly totals
+            </th>
+
+            {monthlyTotals.map((total, monthIndex) => {
+              const percent = total.planned > 0
+                ? Math.round((total.actual / total.planned) * 10000) / 100
+                : null;
+
+              return (
+                <td
+                  key={MONTH_LABELS[monthIndex]}
+                  className="border-t border-blue-100 px-3 py-3 text-right align-top"
+                >
+                  <div className="font-semibold text-gray-900">
+                    Plan ${formatCurrency(total.planned)}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-600">
+                    Actual ${formatCurrency(total.actual)}
+                    {percent !== null && (
+                      <span className={`ml-1 font-medium ${getPercentColor(percent)}`}>
+                        {percent}%
+                      </span>
+                    )}
+                  </div>
+                </td>
+              );
+            })}
+
+            <td className="border-l border-t border-blue-100 px-4 py-3 text-right align-top">
+              <div className="font-semibold text-gray-900">
+                Plan ${formatCurrency(annualTotals.planned)}
+              </div>
+              <div className="mt-1 text-xs text-gray-600">
+                Actual ${formatCurrency(annualTotals.actual)}
+                {annualTotalsPercent !== null && (
+                  <span className={`ml-1 font-medium ${getPercentColor(annualTotalsPercent)}`}>
+                    {annualTotalsPercent}%
+                  </span>
+                )}
+              </div>
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
