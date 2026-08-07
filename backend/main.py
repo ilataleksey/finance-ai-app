@@ -1,6 +1,6 @@
 from http.client import responses
 
-from fastapi import FastAPI, Depends, Body, HTTPException
+from fastapi import FastAPI, Depends, Body, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic.v1.schema import normalize_name
 from sqlalchemy.orm import Session
@@ -411,40 +411,31 @@ def create_budget(
 
 @app.get("/budgets/status", response_model=list[schemas.BudgetStatusResponse])
 def get_budget_status(
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        year: int = Query(ge=2000, le=2100),
+        month: int = Query(ge=1, le=12),
         db: Session = Depends(get_db),
 ):
 
-    # 1. Подготавливаем условие для JOIN расходов
+    month_start = datetime(year, month, 1)
+
+    if month == 12:
+        next_month_start = datetime(year + 1, 1, 1)
+    else:
+        next_month_start = datetime(year, month + 1, 1)
+
     expense_filters = [
-        models.Expense.category_id == models.Category.id
+        models.Expense.category_id == models.Category.id,
+        models.Expense.created_at >= month_start,
+        models.Expense.created_at < next_month_start,
     ]
 
-    # 2. Если задана дата начала - добавлыемм ее в условие соединения
-    if start_date:
-        expense_filters.append(
-            models.Expense.created_at >= start_date
-        )
-
-    # 3. Если задана дата окончания - добавлыемм ее в условие соединения
-    if end_date:
-        end_of_day = get_end_of_day(end_date)
-        expense_filters.append(
-            models.Expense.created_at <= end_of_day
-        )
-
-    # 4. Выполняем запрос:
-    # - берем все бюджеты
-    # - подтягиваем категорию
-    # - подтягиваем расходы только за выбранный период
     results = (
         db.query(
             models.Category.name.label("category"),
             models.Budget.amount.label("budget"),
             func.coalesce(
                 func.sum(models.Expense.amount),
-                0
+                0,
             ).label("spent"),
         )
         .join(
@@ -453,7 +444,11 @@ def get_budget_status(
         )
         .outerjoin(
             models.Expense,
-            and_(*expense_filters)
+            and_(*expense_filters),
+        )
+        .filter(
+            models.Budget.year == year,
+            models.Budget.month == month,
         )
         .group_by(
             models.Category.id,
@@ -464,17 +459,12 @@ def get_budget_status(
         .all()
     )
 
-    # 5. Формируем ответ
     response = []
 
     for row in results:
-        budget = float(row.budget or 0)
-        spent = float(row.spent or 0)
-
-        if budget > 0:
-            percent = round((spent / budget) * 100, 2)
-        else:
-            percent = 0
+        budget = float(row.budget)
+        spent = float(row.spent)
+        percent = round((spent / budget) * 100, 2)
 
         response.append(
             {

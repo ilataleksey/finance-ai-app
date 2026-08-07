@@ -3,6 +3,7 @@ import type { BudgetStatus } from "@/types/api";
 type BudgetSectionProps = {
   budgetStatus: BudgetStatus[];
   formatCurrency: (value: number) => string;
+  periodLabel: string;
 };
 
 function getBudgetBarColor(percent: number): string {
@@ -20,12 +21,19 @@ function getBudgetBarColor(percent: number): string {
 export default function BudgetSection({
   budgetStatus,
   formatCurrency,
+  periodLabel,
 }: BudgetSectionProps) {
   return (
     <section className="mt-8 bg-white p-4 rounded-xl shadow">
-      <h2 className="text-lg font-semibold mb-4">
-        Category Budgets
-      </h2>
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold">
+          Budget for {periodLabel}
+        </h2>
+
+        <p className="text-sm text-gray-500">
+          Monthly spending and limit.
+        </p>
+      </div>
 
       {budgetStatus.length === 0 ? (
         <div className="text-gray-500 text-sm">

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/services/api";
 import { formatLocalDate, getPeriodDateRange, type PeriodId } from "@/utils/dateRange";
 import { buildDateParams } from "@/utils/dateParams";
+import { getBudgetPeriod } from "@/utils/budgetPeriod";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
@@ -38,6 +39,7 @@ export default function Page() {
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
 
   const { startDate, endDate } = dateRange;
+  const budgetPeriod = getBudgetPeriod(endDate);
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -130,7 +132,10 @@ export default function Page() {
           apiFetch<CategorySummary[]>(`/expenses/summary?${query}`, { signal: controller.signal }),
           apiFetch<Stats>(`/expenses/stats?${query}`, { signal: controller.signal }),
           apiFetch<Balance>("/balance", { signal: controller.signal }),
-          apiFetch<BudgetStatus[]>(`/budgets/status?${query}`, { signal: controller.signal }),
+          apiFetch<BudgetStatus[]>(
+            `/budgets/status?year=${budgetPeriod.year}&month=${budgetPeriod.month}`,
+            { signal: controller.signal },
+          ),
         ]);
 
         if (controller.signal.aborted) {
@@ -157,7 +162,13 @@ export default function Page() {
     void loadDashboardData();
 
     return () => controller.abort();
-  }, [endDate, refreshKey, startDate]);
+  }, [
+    budgetPeriod.month,
+    budgetPeriod.year,
+    endDate,
+    refreshKey,
+    startDate
+  ]);
 
   const handlePeriodChange = (nextPeriod: PeriodId) => {
     setIsDashboardLoading(true);
@@ -223,6 +234,7 @@ export default function Page() {
           <BudgetSection
             budgetStatus={budgetStatus}
             formatCurrency={formatCurrency}
+            periodLabel={budgetPeriod.label}
           />
         </div>
 
