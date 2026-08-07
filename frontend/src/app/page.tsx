@@ -8,6 +8,8 @@ import { apiFetch } from "@/services/api";
 import { formatLocalDate, getPeriodDateRange, type PeriodId } from "@/utils/dateRange";
 import { buildDateParams } from "@/utils/dateParams";
 import { getBudgetPeriod } from "@/utils/budgetPeriod";
+import { formatCurrency } from "@/utils/formatCurrency";
+import AppNavigation from "@/components/AppNavigation";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
@@ -45,13 +47,6 @@ export default function Page() {
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
-
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-  };
 
   const addExpense = async () => {
     if (!title || !amount || !categoryId) {
@@ -191,7 +186,8 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {/* HEADER */}
+      <AppNavigation />
+
       <h1 className="text-3xl font-bold mb-6">Finance AI Dashboard</h1>
 
 
