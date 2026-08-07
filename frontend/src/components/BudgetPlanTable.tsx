@@ -1,9 +1,26 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
 import type { BudgetPlan } from "@/types/api";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { isFutureMonth, MONTH_LABELS } from "@/utils/months";
 
+type EditingCell = {
+  categoryId: number;
+  month: number;
+};
+
 type BudgetPlanTableProps = {
   plan: BudgetPlan;
+  savingCell: string | null;
+  onSave: (categoryId: number, month: number, amount: number) => Promise<void>;
+  onDelete: (categoryId: number, month: number) => Promise<void>;
+  onError: (message: string) => void;
+};
+
+function getCellKey(categoryId: number, month: number): string {
+  return `${categoryId}-${month}`;
 }
 
 function getPercentColor(percent: number): string {
@@ -20,7 +37,83 @@ function getPercentColor(percent: number): string {
 
 export default function BudgetPlanTable({
   plan,
+  savingCell,
+  onSave,
+  onDelete,
+  onError,
 }: BudgetPlanTableProps) {
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const [draftAmount, setDraftAmount] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isCommittingRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [editingCell]);
+
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setDraftAmount("");
+  };
+
+  const startEditing = (categoryId: number, month: number, planned: number | null) => {
+    if (savingCell) {
+      return;
+    }
+
+    setEditingCell({ categoryId, month });
+    setDraftAmount(planned?.toString() ?? "");
+  };
+
+  const commitEditing = async (deleteEmptyValue: boolean) => {
+    if (!editingCell || isCommittingRef.current) {
+      return;
+    }
+
+    const value = draftAmount.trim();
+    const cell = editingCell;
+
+    if (!value) {
+      if (!deleteEmptyValue) {
+        cancelEditing();
+        return;
+      }
+
+      isCommittingRef.current = true;
+
+      try {
+        await onDelete(cell.categoryId, cell.month);
+        cancelEditing();
+      } catch {
+        cancelEditing();
+      } finally {
+        isCommittingRef.current = false;
+      }
+
+      return;
+    }
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      onError("Enter a positive budget amount.");
+      cancelEditing();
+      return;
+    }
+
+    isCommittingRef.current = true;
+
+    try {
+      await onSave(cell.categoryId, cell.month, amount);
+      cancelEditing();
+    } catch {
+      cancelEditing();
+    } finally {
+      isCommittingRef.current = false;
+    }
+  };
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
       <table className="min-w-[1180px] w-full border-collapse text-sm">
@@ -64,15 +157,55 @@ export default function BudgetPlanTable({
                 </th>
 
                 {months.map((period) => {
+                  const cellKey = getCellKey(category.id, period.month);
+                  const isEditing =
+                    editingCell?.categoryId === category.id && editingCell.month === period.month;
+                  const isSaving = savingCell === cellKey;
                   const isFuture = isFutureMonth(plan.year, period.month);
 
                   return (
-                    <td key={period.month} className="px-3 py-3 align-top text-right">
-                      <div className="min-h-7 px-1 font-medium text-gray-900">
-                        {period.planned === null ? "—" : `$${formatCurrency(period.planned)}`}
-                      </div>
+                    <td key={cellKey} className="px-3 py-3 align-top text-right">
+                      {isEditing ? (
+                        <input
+                          ref={inputRef}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={draftAmount}
+                          onChange={(event) => setDraftAmount(event.target.value)}
+                          onBlur={() => void commitEditing(false)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              void commitEditing(true);
+                            }
 
-                      {!isFuture && (period.planned !== null || period.actual > 0) && (
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              cancelEditing();
+                            }
+                          }}
+                          disabled={isSaving}
+                          aria-label={`Budget for ${category.name} in ${MONTH_LABELS[period.month - 1]}`}
+                          className="w-24 rounded border border-blue-500 px-2 py-1 text-right text-sm outline-none ring-2 ring-blue-100 disabled:cursor-wait disabled:opacity-60"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditing(category.id, period.month, period.planned)}
+                          disabled={isSaving}
+                          aria-label={`Edit budget for ${category.name} in ${MONTH_LABELS[period.month - 1]}`}
+                          className="min-h-7 rounded px-1 font-medium text-gray-900 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {isSaving
+                            ? "Saving…"
+                            : period.planned === null
+                              ? "—"
+                              : `$${formatCurrency(period.planned)}`}
+                        </button>
+                      )}
+
+                      {!isEditing && !isFuture && (period.planned !== null || period.actual > 0) && (
                         <div className="mt-1 text-xs text-gray-500">
                           Actual ${formatCurrency(period.actual)}
                           {period.percent !== null && (

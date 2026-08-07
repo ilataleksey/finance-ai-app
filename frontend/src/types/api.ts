@@ -18,6 +18,15 @@ export type BudgetStatus = {
     percent: number;
 };
 
+export type Budget = {
+    id: number;
+    category_id: number;
+    amount: number;
+    year: number;
+    month: number;
+    created_at: string;
+};
+
 export type BudgetPlanMonth = {
     month: number;
     planned: number | null;

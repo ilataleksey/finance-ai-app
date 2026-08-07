@@ -6,13 +6,18 @@ import AppNavigation from "@/components/AppNavigation";
 import BudgetPlanTable from "@/components/BudgetPlanTable";
 import PlanYearNavigator from "@/components/PlanYearNavigator";
 import { apiFetch } from "@/services/api";
-import type { BudgetPlan } from "@/types/api";
+import type { Budget, BudgetPlan } from "@/types/api";
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from "@/utils/months";
+
+function getCellKey(categoryId: number, month: number): string {
+  return `${categoryId}-${month}`;
+}
 
 export default function PlanPage() {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [plan, setPlan] = useState<BudgetPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [savingCell, setSavingCell] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +58,66 @@ export default function PlanPage() {
     setIsLoading(true);
     setError(null);
     setYear(nextYear);
+  };
+
+  const refreshPlan = async () => {
+    const data = await apiFetch<BudgetPlan>(`/budgets/plan?year=${year}`);
+    setPlan(data);
+  };
+
+  const saveBudget = async (categoryId: number, month: number, amount: number) => {
+    const cellKey = getCellKey(categoryId, month);
+    setSavingCell(cellKey);
+    setError(null);
+
+    try {
+      await apiFetch<Budget>("/budgets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          category_id: categoryId,
+          amount,
+          year,
+          month,
+        }),
+      });
+
+      await refreshPlan();
+    } catch (saveError) {
+      console.error("Failed to save budget", saveError);
+      setError("Could not save the budget. Please try again.");
+      throw saveError;
+    } finally {
+      setSavingCell(null);
+    }
+  };
+
+  const deleteBudget = async (categoryId: number, month: number) => {
+    const cellKey = getCellKey(categoryId, month);
+    setSavingCell(cellKey);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        category_id: String(categoryId),
+        year: String(year),
+        month: String(month),
+      });
+
+      await apiFetch<void>(`/budgets?${params.toString()}`, {
+        method: "DELETE",
+      });
+
+      await refreshPlan();
+    } catch (deleteError) {
+      console.error("Failed to delete budget", deleteError);
+      setError("Could not delete the budget. Please try again.");
+      throw deleteError;
+    } finally {
+      setSavingCell(null);
+    }
   };
 
   const isCurrentPlanLoaded = plan?.year === year;
@@ -96,7 +161,13 @@ export default function PlanPage() {
           </p>
         </div>
       ) : (
-        <BudgetPlanTable plan={plan} />
+        <BudgetPlanTable
+          plan={plan}
+          savingCell={savingCell}
+          onSave={saveBudget}
+          onDelete={deleteBudget}
+          onError={setError}
+        />
       )}
     </main>
   );
