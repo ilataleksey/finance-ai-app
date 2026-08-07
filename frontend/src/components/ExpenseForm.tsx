@@ -1,4 +1,9 @@
+import { useState } from "react";
+
+import CategoryCreator from "@/components/CategoryCreator";
 import type { Category } from "@/types/api";
+
+const NEW_CATEGORY_VALUE = "__new_category__";
 
 type ExpenseFormProps = {
   title: string;
@@ -14,6 +19,7 @@ type ExpenseFormProps = {
   setCreatedAt: (value: string) => void;
 
   onSubmit: () => void;
+  onCreateCategory: (name: string) => Promise<void>;
 };
 
 export default function ExpenseForm({
@@ -29,8 +35,9 @@ export default function ExpenseForm({
   setCategoryId,
   setCreatedAt,
   onSubmit,
+  onCreateCategory,
 }: ExpenseFormProps) {
-
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   return (
     <div className="bg-white p-4 rounded-xl shadow">
@@ -53,8 +60,16 @@ export default function ExpenseForm({
 
       <select
         className="w-full mb-2 p-2 border rounded"
-        value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
+        value={isCreatingCategory ? NEW_CATEGORY_VALUE : categoryId}
+        onChange={(event) => {
+          if (event.target.value === NEW_CATEGORY_VALUE) {
+            setIsCreatingCategory(true);
+            return;
+          }
+
+          setIsCreatingCategory(false);
+          setCategoryId(event.target.value);
+        }}
       >
         <option value="">Select category</option>
         {categories.map((c) => (
@@ -62,7 +77,17 @@ export default function ExpenseForm({
             {c.name}
           </option>
         ))}
+        <option value={NEW_CATEGORY_VALUE}>+ Add a category</option>
       </select>
+
+      {isCreatingCategory && (
+        <div className="mb-2">
+          <CategoryCreator
+            onCreate={onCreateCategory}
+            onCancel={() => setIsCreatingCategory(false)}
+          />
+        </div>
+      )}
 
       <input
         className="w-full mb-2 p-2 border rounded"

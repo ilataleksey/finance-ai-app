@@ -74,6 +74,20 @@ export default function Page() {
     setRefreshKey((key) => key + 1);
   };
 
+  const createCategory = async (name: string) => {
+    const params = new URLSearchParams({ name });
+    const category = await apiFetch<Category>(`/categories?${params.toString()}`, {
+      method: "POST",
+    });
+
+    setCategories((currentCategories) => {
+      return [...currentCategories, category].sort((first, second) => {
+        return first.name.localeCompare(second.name);
+      });
+    });
+    setCategoryId(String(category.id));
+  };
+
 
   //=====DELETE=====
   const deleteExpense = async (id: number) => {
@@ -252,6 +266,7 @@ export default function Page() {
             setCreatedAt={setCreatedAt}
 
             onSubmit={addExpense}
+            onCreateCategory={createCategory}
           />
 
           {/* EXPENSE LIST */}

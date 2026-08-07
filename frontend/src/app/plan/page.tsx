@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 
 import AppNavigation from "@/components/AppNavigation";
 import BudgetPlanTable from "@/components/BudgetPlanTable";
+import CategoryCreator from "@/components/CategoryCreator";
 import PlanYearNavigator from "@/components/PlanYearNavigator";
 import { apiFetch } from "@/services/api";
-import type { Budget, BudgetPlan } from "@/types/api";
+import type { Budget, BudgetPlan, Category } from "@/types/api";
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from "@/utils/months";
 
 function getCellKey(categoryId: number, month: number): string {
@@ -19,6 +20,7 @@ export default function PlanPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,6 +65,14 @@ export default function PlanPage() {
   const refreshPlan = async () => {
     const data = await apiFetch<BudgetPlan>(`/budgets/plan?year=${year}`);
     setPlan(data);
+  };
+
+  const createCategory = async (name: string) => {
+    const params = new URLSearchParams({ name });
+    await apiFetch<Category>(`/categories?${params.toString()}`, {
+      method: "POST",
+    });
+    await refreshPlan();
   };
 
   const saveBudget = async (categoryId: number, month: number, amount: number) => {
@@ -134,8 +144,27 @@ export default function PlanPage() {
           </p>
         </div>
 
-        <PlanYearNavigator year={year} onYearChange={handleYearChange} />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCreatingCategory((current) => !current)}
+            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          >
+            Add category
+          </button>
+
+          <PlanYearNavigator year={year} onYearChange={handleYearChange} />
+        </div>
       </div>
+
+      {isCreatingCategory && (
+        <div className="mb-4 max-w-md">
+          <CategoryCreator
+            onCreate={createCategory}
+            onCancel={() => setIsCreatingCategory(false)}
+          />
+        </div>
+      )}
 
       {error && (
         <div

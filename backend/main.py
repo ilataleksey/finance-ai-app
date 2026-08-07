@@ -85,7 +85,7 @@ def create_expense(
     return db_expense
 
 
-@app.post("/categories")
+@app.post("/categories", response_model=schemas.CategoryResponse)
 def create_category(name: str, db: Session = Depends(get_db)):
     normalized_name = name.strip().lower()
 
