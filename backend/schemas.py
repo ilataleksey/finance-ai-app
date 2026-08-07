@@ -72,3 +72,20 @@ class BudgetStatusResponse(BaseModel):
     budget: float
     spent: float
     percent: float
+
+
+class BudgetPlanMonthResponse(BaseModel):
+    month: int
+    planned: float | None
+    actual: float
+    percent: float | None
+
+
+class BudgetPlanCategoryResponse(BaseModel):
+    category: CategoryResponse
+    months: list[BudgetPlanMonthResponse]
+
+
+class BudgetPlanResponse(BaseModel):
+    year: int
+    categories: list[BudgetPlanCategoryResponse]

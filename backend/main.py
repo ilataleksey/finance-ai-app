@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, Body, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic.v1.schema import normalize_name
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, extract
 from database import engine, SessionLocal
 from typing import List, Any
 from datetime import datetime, UTC, time
@@ -407,6 +407,115 @@ def create_budget(
     db.refresh(new_budget)
 
     return new_budget
+
+
+@app.delete("/budgets", status_code=204)
+def delete_budget(
+        category_id: int = Query(gt=0),
+        year: int = Query(ge=2000, le=2100),
+        month: int = Query(ge=1, le=12),
+        db: Session = Depends(get_db),
+):
+    budget = (
+        db.query(models.Budget)
+        .filter(
+            models.Budget.category_id == category_id,
+            models.Budget.year == year,
+            models.Budget.month == month,
+        )
+        .first()
+    )
+
+    if budget:
+        db.delete(budget)
+        db.commit()
+
+
+@app.get("/budgets/plan", response_model=schemas.BudgetPlanResponse)
+def get_budget_plan(
+        year: int = Query(ge=2000, le=2100),
+        db: Session = Depends(get_db),
+):
+    year_start = datetime(year=year, month=1, day=1)
+    next_year_start = datetime(year=year+1, month=1, day=1)
+
+    categories = (
+        db.query(models.Category)
+        .order_by(func.lower(models.Category.name), models.Category.id)
+        .all()
+    )
+
+    budget_rows = (
+        db.query(models.Budget)
+        .filter(models.Budget.year == year)
+        .all()
+    )
+
+    actual_rows = (
+        db.query(
+            models.Expense.category_id,
+            extract("month", models.Expense.created_at).label("month"),
+            func.sum(models.Expense.amount).label("actual"),
+        )
+        .filter(
+            models.Expense.created_at >= year_start,
+            models.Expense.created_at < next_year_start,
+        )
+        .group_by(
+            models.Expense.category_id,
+            extract("month", models.Expense.created_at),
+        )
+        .all()
+    )
+
+    planned_by_period = {
+        (budget.category_id, budget.month): float(budget.amount)
+        for budget in budget_rows
+    }
+
+    actual_by_period = {
+        (row.category_id, int(row.month)): float(row.actual)
+        for row in actual_rows
+    }
+
+    plan_categories = []
+
+    for category in categories:
+        months = []
+
+        for month in range(1, 13):
+            planned = planned_by_period.get((category.id, month))
+            actual = actual_by_period.get((category.id, month), 0)
+
+            percent = (
+                round((actual / planned) * 100, 2)
+                if planned is not None
+                else None
+            )
+
+            months.append(
+                {
+                    "month": month,
+                    "planned": planned,
+                    "actual": actual,
+                    "percent": percent,
+                }
+            )
+
+        plan_categories.append(
+            {
+                "category": {
+                    "id": category.id,
+                    "name": category.name,
+                },
+                "months": months,
+            }
+        )
+
+    return {
+        "year": year,
+        "categories": plan_categories,
+    }
 
 
 @app.get("/budgets/status", response_model=list[schemas.BudgetStatusResponse])
