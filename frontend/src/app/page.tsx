@@ -16,6 +16,7 @@ import ExpenseList from "@/components/ExpenseList";
 import ChartSection from "@/components/ChartSection";
 import CategoryPieChart from "@/components/CategoryPieChart";
 import BudgetSection from "@/components/BudgetSection";
+import ErrorState from "@/components/ErrorState";
 
 import type {
   Category,
@@ -39,6 +40,7 @@ export default function Page() {
   const [budgetStatus, setBudgetStatus] = useState<BudgetStatus[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -88,12 +90,16 @@ export default function Page() {
     setCategoryId(String(category.id));
   };
 
-
-  //=====DELETE=====
   const deleteExpense = async (id: number) => {
     await apiFetch(`/expenses/${id}`, {
       method: "DELETE",
     });
+    setIsDashboardLoading(true);
+    setRefreshKey((key) => key + 1);
+  };
+
+  const handleDashboardRetry = () => {
+    setDashboardError(null);
     setIsDashboardLoading(true);
     setRefreshKey((key) => key + 1);
   };
@@ -127,6 +133,8 @@ export default function Page() {
     const query = buildDateParams(startDate, endDate);
 
     async function loadDashboardData() {
+      setDashboardError(null);
+
       try {
         const [
           expensesData,
@@ -160,6 +168,9 @@ export default function Page() {
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("Failed to load dashboard data", error);
+          setDashboardError(
+            "Не удалось загрузить данные Dashboard. Проверьте соединение с сервером и попробуйте еще раз."
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -204,81 +215,91 @@ export default function Page() {
 
       <h1 className="text-3xl font-bold mb-6">Finance AI Dashboard</h1>
 
+      {dashboardError ? (
+        <ErrorState
+          title="Не удалось загрузить Dashboard"
+          description={dashboardError}
+          onRetry={handleDashboardRetry}
+        />
+      ) : (
+        <>
 
-      {/* CARDS */}
-      <DashboardCards
-        stats={stats}
-        balance={balanceData}
-        formatCurrency={formatCurrency}
-      />
-
-      {/* Форма */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* LEFT - CHART */}
-        <div
-          className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto"
-          aria-busy={isDashboardLoading}
-        >
-
-          {/* CHART */}
-          <ChartSection
-            chartData={chartData}
-            startDate={startDate}
-            endDate={endDate}
-            period={period}
-            isLoading={isDashboardLoading}
-            onStartDateChange={handleStartDateChange}
-            onEndDateChange={handleEndDateChange}
-            onReset={() => handlePeriodChange("all")}
-            onPeriodChange={handlePeriodChange}
-          />
-
-          {/* PIE */}
-          <CategoryPieChart
-            summaryData={summaryData}
+          {/* CARDS */}
+          <DashboardCards
+            stats={stats}
+            balance={balanceData}
             formatCurrency={formatCurrency}
-            isLoading={isDashboardLoading}
           />
 
-          {/* BUDGET */}
-          <BudgetSection
-            budgetStatus={budgetStatus}
-            formatCurrency={formatCurrency}
-            periodLabel={budgetPeriod.label}
-          />
-        </div>
+          {/* Форма */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* LEFT - CHART */}
+            <div
+              className="xl:col-span-2 bg-white p-4 rounded-xl shadow overflow-x-auto"
+              aria-busy={isDashboardLoading}
+            >
 
-        {/* RIGHT - FORM + LIST */}
-        <div className="space-y-6">
+              {/* CHART */}
+              <ChartSection
+                chartData={chartData}
+                startDate={startDate}
+                endDate={endDate}
+                period={period}
+                isLoading={isDashboardLoading}
+                onStartDateChange={handleStartDateChange}
+                onEndDateChange={handleEndDateChange}
+                onReset={() => handlePeriodChange("all")}
+                onPeriodChange={handlePeriodChange}
+              />
 
-          {/* ADD FORM */}
-          <ExpenseForm
-            title={title}
-            amount={amount}
-            categoryId={categoryId}
-            createdAt={createdAt}
+              {/* PIE */}
+              <CategoryPieChart
+                summaryData={summaryData}
+                formatCurrency={formatCurrency}
+                isLoading={isDashboardLoading}
+              />
 
-            categories={categories}
+              {/* BUDGET */}
+              <BudgetSection
+                budgetStatus={budgetStatus}
+                formatCurrency={formatCurrency}
+                periodLabel={budgetPeriod.label}
+              />
+            </div>
 
-            setTitle={setTitle}
-            setAmount={setAmount}
-            setCategoryId={setCategoryId}
-            setCreatedAt={setCreatedAt}
+            {/* RIGHT - FORM + LIST */}
+            <div className="space-y-6">
 
-            onSubmit={addExpense}
-            onCreateCategory={createCategory}
-          />
+              {/* ADD FORM */}
+              <ExpenseForm
+                title={title}
+                amount={amount}
+                categoryId={categoryId}
+                createdAt={createdAt}
 
-          {/* EXPENSE LIST */}
-          <ExpenseList
-            expenses={expenses}
-            formatCurrency={formatCurrency}
-            onDelete={deleteExpense}
-            isLoading={isDashboardLoading}
-          />
+                categories={categories}
 
-        </div>
-      </div>
+                setTitle={setTitle}
+                setAmount={setAmount}
+                setCategoryId={setCategoryId}
+                setCreatedAt={setCreatedAt}
+
+                onSubmit={addExpense}
+                onCreateCategory={createCategory}
+              />
+
+              {/* EXPENSE LIST */}
+              <ExpenseList
+                expenses={expenses}
+                formatCurrency={formatCurrency}
+                onDelete={deleteExpense}
+                isLoading={isDashboardLoading}
+              />
+
+            </div>
+          </div>
+        </>
+      )}
       {isDashboardLoading && (
         <div
           className="pointer-events-none fixed bottom-4 right-4 z-50 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg"
@@ -287,6 +308,7 @@ export default function Page() {
           Updating dashboard...
         </div>
       )}
+
     </div>
   );
 }
