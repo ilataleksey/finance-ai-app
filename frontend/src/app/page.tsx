@@ -41,6 +41,7 @@ export default function Page() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -51,29 +52,46 @@ export default function Page() {
   const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
 
   const addExpense = async () => {
-    if (!title || !amount || !categoryId) {
-      alert("заполни все поля");
+    if (!title.trim() || !amount || !categoryId) {
+      setExpenseFormError("Введите название, сумму и выберите категорию.");
       return;
-    };
+    }
 
-    await apiFetch(`/expenses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        amount: parseFloat(amount),
-        category_id: Number(categoryId),
-        created_at: createdAt,
-      }),
-    });
+    const parsedAmount = Number(amount);
 
-    setTitle("");
-    setAmount("");
-    setCategoryId("");
-    setIsDashboardLoading(true);
-    setRefreshKey((key) => key + 1);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setExpenseFormError("Сумма расхода должна быть больше нуля.");
+      return;
+    }
+
+    setExpenseFormError(null);
+
+    try {
+      await apiFetch("/expenses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: title.trim(),
+          amount: parsedAmount,
+          category_id: Number(categoryId),
+          created_at: createdAt,
+        }),
+      });
+
+      setTitle("");
+      setAmount("");
+      setCategoryId("");
+      setIsDashboardLoading(true);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      console.error("Failed to create expense", error);
+
+      setExpenseFormError(
+        "Не удалось сохранить расход. Проверьте соединение с сервером и попробуйте ещё раз.",
+      );
+    }
   };
 
   const createCategory = async (name: string) => {
@@ -276,6 +294,7 @@ export default function Page() {
                 amount={amount}
                 categoryId={categoryId}
                 createdAt={createdAt}
+                errorMessage={expenseFormError}
 
                 categories={categories}
 

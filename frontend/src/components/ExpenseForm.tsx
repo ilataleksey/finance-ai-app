@@ -10,6 +10,7 @@ type ExpenseFormProps = {
   amount: string;
   categoryId: string;
   createdAt: string;
+  errorMessage: string | null;
 
   categories: Category[];
 
@@ -27,6 +28,7 @@ export default function ExpenseForm({
   amount,
   categoryId,
   createdAt,
+  errorMessage,
 
   categories,
 
@@ -42,6 +44,15 @@ export default function ExpenseForm({
   return (
     <div className="bg-white p-4 rounded-xl shadow">
       <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
+
+      {errorMessage && (
+        <div
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+          role="alert"
+        >
+          {errorMessage}
+        </div>
+      )}
 
       <input
         className="w-full mb-2 p-2 border rounded"
