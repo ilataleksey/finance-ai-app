@@ -11,6 +11,7 @@ type ExpenseFormProps = {
   categoryId: string;
   createdAt: string;
   errorMessage: string | null;
+  isSaving: boolean;
 
   categories: Category[];
 
@@ -29,6 +30,7 @@ export default function ExpenseForm({
   categoryId,
   createdAt,
   errorMessage,
+  isSaving,
 
   categories,
 
@@ -108,10 +110,12 @@ export default function ExpenseForm({
       />
 
       <button
+        type="button"
         onClick={onSubmit}
-        className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        disabled={isSaving}
+        className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Add
+        {isSaving ? "Сохранение…" : "Add"}
       </button>
     </div>
   );

@@ -42,6 +42,7 @@ export default function Page() {
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
+  const [isExpenseSaving, setIsExpenseSaving] = useState(false);
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -52,6 +53,9 @@ export default function Page() {
   const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
 
   const addExpense = async () => {
+    if (isExpenseSaving) {
+      return;
+    }
     if (!title.trim() || !amount || !categoryId) {
       setExpenseFormError("Введите название, сумму и выберите категорию.");
       return;
@@ -65,6 +69,7 @@ export default function Page() {
     }
 
     setExpenseFormError(null);
+    setIsExpenseSaving(true);
 
     try {
       await apiFetch("/expenses", {
@@ -91,6 +96,8 @@ export default function Page() {
       setExpenseFormError(
         "Не удалось сохранить расход. Проверьте соединение с сервером и попробуйте ещё раз.",
       );
+    } finally {
+      setIsExpenseSaving(false);
     }
   };
 
@@ -295,6 +302,7 @@ export default function Page() {
                 categoryId={categoryId}
                 createdAt={createdAt}
                 errorMessage={expenseFormError}
+                isSaving={isExpenseSaving}
 
                 categories={categories}
 
