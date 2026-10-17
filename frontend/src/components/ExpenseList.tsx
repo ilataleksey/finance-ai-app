@@ -6,6 +6,11 @@ type ExpenseListProp = {
   formatCurrency: (value: number) => string;
   onDelete: (id: number) => void;
   isLoading: boolean;
+  deletingExpenseId: number | null;
+  deleteError: {
+    expenseId: number;
+    message: string;
+  } | null;
 };
 
 export default function ExpenseList({
@@ -13,6 +18,8 @@ export default function ExpenseList({
   formatCurrency,
   onDelete,
   isLoading,
+  deletingExpenseId,
+  deleteError,
 }: ExpenseListProp) {
   return (
     <div
@@ -43,6 +50,11 @@ export default function ExpenseList({
               </div>
               <div className="text-sm text-gray-500">
                 {e.created_at.split("T")[0]}
+                {deleteError?.expenseId === e.id && (
+                  <p className="mt-1 text-sm text-red-700" role="alert">
+                    {deleteError.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -50,10 +62,12 @@ export default function ExpenseList({
               <div>${formatCurrency(e.amount)}</div>
 
               <button
+                type="button"
                 onClick={() => onDelete(e.id)}
-                className="text-red-500"
+                disabled={deletingExpenseId !== null}
+                className="text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Delete
+                {deletingExpenseId === e.id ? "Удаление…" : "Delete"}
               </button>
             </div>
           </div>

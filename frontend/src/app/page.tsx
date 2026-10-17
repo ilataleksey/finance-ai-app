@@ -28,6 +28,11 @@ import type {
   BudgetStatus,
 } from "@/types/api";
 
+type ExpenseDeleteError = {
+  expenseId: number;
+  message: string;
+};
+
 export default function Page() {
   const [chartData, setChartData] = useState<DailyExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -43,6 +48,8 @@ export default function Page() {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
   const [isExpenseSaving, setIsExpenseSaving] = useState(false);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
+  const [expenseDeleteError, setExpenseDeleteError] = useState<ExpenseDeleteError | null>(null);
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -116,11 +123,30 @@ export default function Page() {
   };
 
   const deleteExpense = async (id: number) => {
-    await apiFetch(`/expenses/${id}`, {
-      method: "DELETE",
-    });
-    setIsDashboardLoading(true);
-    setRefreshKey((key) => key + 1);
+    if (deletingExpenseId !== null) {
+      return;
+    }
+
+    setDeletingExpenseId(id);
+    setExpenseDeleteError(null);
+
+    try {
+      await apiFetch(`/expenses/${id}`, {
+        method: "DELETE",
+      });
+
+      setIsDashboardLoading(true);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      console.error("Failed to delete expense", error);
+
+      setExpenseDeleteError({
+        expenseId: id,
+        message: "Не удалось удалить расход. Попробуйте ещё раз.",
+      });
+    } finally {
+      setDeletingExpenseId(null);
+    }
   };
 
   const handleDashboardRetry = () => {
@@ -321,6 +347,8 @@ export default function Page() {
                 formatCurrency={formatCurrency}
                 onDelete={deleteExpense}
                 isLoading={isDashboardLoading}
+                deletingExpenseId={deletingExpenseId}
+                deleteError={expenseDeleteError}
               />
 
             </div>
