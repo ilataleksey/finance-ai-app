@@ -35,7 +35,12 @@ type ExpenseDeleteError = {
 
 export default function Page() {
   const [chartData, setChartData] = useState<DailyExpense[]>([]);
+
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [categoriesRefreshKey, setCategoriesRefreshKey] = useState(0);
+
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [dateRange, setDateRange] = useState(() => getPeriodDateRange("month"));
   const [summaryData, setSummaryData] = useState<CategorySummary[]>([]);
@@ -60,7 +65,7 @@ export default function Page() {
   const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
 
   const addExpense = async () => {
-    if (isExpenseSaving) {
+    if (isExpenseSaving || isCategoriesLoading || categoriesError !== null) {
       return;
     }
     if (!title.trim() || !amount || !categoryId) {
@@ -149,6 +154,16 @@ export default function Page() {
     }
   };
 
+  const handleCategoriesRetry = () => {
+    if (isCategoriesLoading) {
+      return;
+    }
+
+    setCategoriesError(null);
+    setIsCategoriesLoading(true);
+    setCategoriesRefreshKey((key) => key + 1);
+  };
+
   const handleDashboardRetry = () => {
     setDashboardError(null);
     setIsDashboardLoading(true);
@@ -164,12 +179,26 @@ export default function Page() {
           signal: controller.signal,
         });
 
-        if (!controller.signal.aborted) {
-          setCategories(Array.isArray(data) ? data : []);
+        if (controller.signal.aborted) {
+          return;
         }
+
+        if (!Array.isArray(data)) {
+          throw new Error("Expected categories to be an array");
+        }
+
+        setCategories(data);
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error("Failed to load categories", error);
+
+          setCategoriesError(
+            "Не удалось загрузить категории. Попробуйте ещё раз.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsCategoriesLoading(false);
         }
       }
     }
@@ -177,7 +206,7 @@ export default function Page() {
     void loadCategories();
 
     return () => controller.abort();
-  }, []);
+  }, [categoriesRefreshKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -331,6 +360,9 @@ export default function Page() {
                 isSaving={isExpenseSaving}
 
                 categories={categories}
+                isCategoriesLoading={isCategoriesLoading}
+                categoriesError={categoriesError}
+                onCategoriesRetry={handleCategoriesRetry}
 
                 setTitle={setTitle}
                 setAmount={setAmount}

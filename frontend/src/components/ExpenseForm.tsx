@@ -3,6 +3,8 @@ import { useState } from "react";
 import CategoryCreator from "@/components/CategoryCreator";
 import type { Category } from "@/types/api";
 
+import ErrorState from "@/components/ErrorState";
+
 const NEW_CATEGORY_VALUE = "__new_category__";
 
 type ExpenseFormProps = {
@@ -14,6 +16,9 @@ type ExpenseFormProps = {
   isSaving: boolean;
 
   categories: Category[];
+  isCategoriesLoading: boolean;
+  categoriesError: string | null;
+  onCategoriesRetry: () => void;
 
   setTitle: (value: string) => void;
   setAmount: (value: string) => void;
@@ -33,6 +38,9 @@ export default function ExpenseForm({
   isSaving,
 
   categories,
+  isCategoriesLoading,
+  categoriesError,
+  onCategoriesRetry,
 
   setTitle,
   setAmount,
@@ -42,6 +50,7 @@ export default function ExpenseForm({
   onCreateCategory,
 }: ExpenseFormProps) {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const areCategoriesUnavailable = isCategoriesLoading || categoriesError !== null;
 
   return (
     <div className="bg-white p-4 rounded-xl shadow">
@@ -72,7 +81,9 @@ export default function ExpenseForm({
       />
 
       <select
-        className="w-full mb-2 p-2 border rounded"
+        className="w-full mb-2 p-2 border rounded disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={areCategoriesUnavailable}
+        aria-busy={isCategoriesLoading}
         value={isCreatingCategory ? NEW_CATEGORY_VALUE : categoryId}
         onChange={(event) => {
           if (event.target.value === NEW_CATEGORY_VALUE) {
@@ -84,7 +95,13 @@ export default function ExpenseForm({
           setCategoryId(event.target.value);
         }}
       >
-        <option value="">Select category</option>
+        <option value="">
+          {isCategoriesLoading
+            ? "Загрузка категорий…"
+            : categoriesError
+              ? "Категории недоступны"
+              : "Select category"}
+        </option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -93,7 +110,29 @@ export default function ExpenseForm({
         <option value={NEW_CATEGORY_VALUE}>+ Add a category</option>
       </select>
 
-      {isCreatingCategory && (
+      {isCategoriesLoading && (
+        <p className="mb-2 text-sm text-gray-500" role="status">
+          Загрузка категорий…
+        </p>
+      )}
+
+      {categoriesError && (
+        <div className="mb-2">
+          <ErrorState
+            title="Категории недоступны"
+            description={categoriesError}
+            onRetry={onCategoriesRetry}
+          />
+        </div>
+      )}
+
+      {!areCategoriesUnavailable && categories.length === 0 && (
+        <p className="mb-2 text-sm text-gray-600">
+          Категорий пока нет. Выберите «+ Add a category», чтобы создать первую.
+        </p>
+      )}
+
+      {isCreatingCategory && !areCategoriesUnavailable && (
         <div className="mb-2">
           <CategoryCreator
             onCreate={onCreateCategory}
@@ -112,7 +151,7 @@ export default function ExpenseForm({
       <button
         type="button"
         onClick={onSubmit}
-        disabled={isSaving}
+        disabled={isSaving || areCategoriesUnavailable}
         className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSaving ? "Сохранение…" : "Add"}
