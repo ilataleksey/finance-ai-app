@@ -3,9 +3,13 @@ from datetime import datetime
 from typing import Optional
 
 class ExpenseCreate(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+    )
+
     title: str = Field(min_length=1, max_length=100)
-    amount: float = Field(gt=0)
-    category_id: int
+    amount: float = Field(gt=0, allow_inf_nan=False)
+    category_id: int = Field(gt=0)
     created_at: Optional[datetime] = None
 
 
