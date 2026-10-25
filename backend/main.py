@@ -5,7 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic.v1.schema import normalize_name
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
-from database import engine, SessionLocal
+from database import engine
+from dependencies import get_db
+from api.routers import expenses
 from typing import List, Any
 from datetime import datetime, UTC, time
 from typing import Optional
@@ -40,14 +42,7 @@ app.add_middleware(
 
 # создает таблицы в БД
 models.Base.metadata.create_all(bind=engine)
-
-# создае м подключение к БД
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+app.include_router(expenses.router)
 
 
 def get_end_of_day(date: datetime) -> datetime:
@@ -55,34 +50,6 @@ def get_end_of_day(date: datetime) -> datetime:
         date.date(),
         time(23, 59, 59),
     )
-
-
-@app.post("/expenses", response_model=schemas.ExpenseResponse)
-def create_expense(
-        expense: schemas.ExpenseCreate,
-        db: Session = Depends(get_db),
-):
-    category = db.query(models.Category).filter(
-        models.Category.id == expense.category_id
-    ).first()
-
-    if not category:
-        raise HTTPException(
-            status_code=404,
-            detail="Category not found"
-        )
-
-    db_expense = models.Expense(
-        title=expense.title,
-        amount=expense.amount,
-        category_id=expense.category_id,
-        created_at=expense.created_at or datetime.now(UTC),
-    )
-    db.add(db_expense)
-    db.commit()
-    db.refresh(db_expense)
-
-    return db_expense
 
 
 @app.post("/categories", response_model=schemas.CategoryResponse)
@@ -288,25 +255,6 @@ def get_expenses_stats(
         "avg_per_day": round(avg_per_day, 2),
         "top_category": top_category,
     }
-
-
-
-
-@app.delete("/expenses/{expense_id}")
-def delete_expense(expense_id: int, db: Session = Depends(get_db)):
-    expense = db.query(models.Expense).filter(
-        models.Expense.id == expense_id
-    ).first()
-
-    if not (expense):
-        raise HTTPException(
-            status_code=404, detail="Expense not found"
-        )
-
-    db.delete(expense)
-    db.commit()
-
-    return {"message": "Deleted"}
 
 
 @app.get("/")
