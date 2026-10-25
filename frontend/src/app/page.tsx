@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 
-import { apiFetch } from "@/services/api";
+import { ApiError, apiFetch } from "@/services/api";
 import { formatLocalDate, getPeriodDateRange, type PeriodId } from "@/utils/dateRange";
 import { buildDateParams } from "@/utils/dateParams";
 import { getBudgetPeriod } from "@/utils/budgetPeriod";
@@ -32,6 +32,49 @@ type ExpenseDeleteError = {
   expenseId: number;
   message: string;
 };
+
+
+function getExpenseCreateErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 422) {
+      return (
+        "Проверьте данные расхода: название — от 1 до 100 символов, " +
+        "сумма — больше нуля, категория и дата должны быть корректными."
+      );
+    }
+
+    const body = error.body;
+
+    if (
+      error.status === 404 &&
+      typeof body === "object" &&
+      body !== null &&
+      "detail" in body &&
+      body.detail === "Category not found"
+    ) {
+      return (
+        "Выбранная категория больше недоступна. " +
+        "Обновите страницу и выберите существующую категорию."
+      );
+    }
+
+    if (error.status >= 500 && error.status <= 599) {
+      return "Сервер временно не может сохранить расход. Попробуйте позже.";
+    }
+
+    return "Не удалось сохранить расход. Попробуйте ещё раз.";
+  }
+
+  if (error instanceof TypeError) {
+    return (
+      "Не удалось связаться с сервером. " +
+      "Проверьте соединение и попробуйте ещё раз."
+    );
+  }
+
+  return "Не удалось сохранить расход. Попробуйте ещё раз.";
+}
+
 
 export default function Page() {
   const [chartData, setChartData] = useState<DailyExpense[]>([]);
@@ -105,9 +148,7 @@ export default function Page() {
     } catch (error) {
       console.error("Failed to create expense", error);
 
-      setExpenseFormError(
-        "Не удалось сохранить расход. Проверьте соединение с сервером и попробуйте ещё раз.",
-      );
+      setExpenseFormError(getExpenseCreateErrorMessage(error));
     } finally {
       setIsExpenseSaving(false);
     }
