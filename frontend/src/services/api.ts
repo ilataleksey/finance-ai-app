@@ -1,4 +1,5 @@
 const API_URL = "http://localhost:8000";
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export class ApiError extends Error {
   readonly status: number;
@@ -17,7 +18,16 @@ export async function apiFetch<T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, options);
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, timeoutSignal])
+    : timeoutSignal;
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    signal,
+  });
 
   if (!response.ok) {
     let body: unknown = null;
@@ -25,7 +35,8 @@ export async function apiFetch<T>(
     try {
       body = await response.json();
     } catch {
-      // Ошибочный ответ может содержать текст или пустое тело.
+      signal.throwIfAborted();
+      // Ответ получен, но его тело не является JSON.
     }
 
     throw new ApiError(response.status, body);
@@ -35,5 +46,5 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  return await response.json() as T;
 }

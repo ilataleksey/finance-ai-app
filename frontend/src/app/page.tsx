@@ -35,6 +35,16 @@ type ExpenseDeleteError = {
 
 
 function getExpenseCreateErrorMessage(error: unknown): string {
+  if (
+    error instanceof DOMException &&
+    error.name === "TimeoutError"
+  ) {
+    return (
+      "Сервер не ответил вовремя. Расход мог сохраниться. " +
+      "Обновите список расходов перед повторной отправкой."
+    );
+  }
+
   if (error instanceof ApiError) {
     if (error.status === 422) {
       return (
