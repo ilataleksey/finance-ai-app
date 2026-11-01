@@ -56,23 +56,25 @@ def create_expense(
 
 @router.get("", response_model=List[schemas.ExpenseResponse])
 def get_expenses(
-        # параметр из URL: /expenses?category=food
-        category: str | None = None,
-        sort_by: str = "created_at",
-        db: Session = Depends(get_db)
+    category: str | None = None,
+    sort_by: str = "created_at",
+    db: Session = Depends(get_db),
 ):
     query = db.query(models.Expense)
 
     if category:
-        query = query.filter(models.Expense.category == category)
+        query = query.join(
+            models.Expense.category
+        ).filter(
+            models.Category.name == category
+        )
 
     if sort_by == "amount":
         query = query.order_by(models.Expense.amount.desc())
     else:
         query = query.order_by(models.Expense.created_at.desc())
 
-    expenses = query.all()
-    return expenses
+    return query.all()
 
 
 @router.get("/summary")
