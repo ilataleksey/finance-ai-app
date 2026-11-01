@@ -89,7 +89,7 @@ def create_income(
     db_income = models.Income(
         source=income.source,
         amount=income.amount,
-        create_at=income.create_at or datetime.now(UTC),
+        created_at=income.created_at or datetime.now(UTC),
     )
     db.add(db_income)
     db.commit()

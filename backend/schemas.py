@@ -36,8 +36,12 @@ class ExpenseResponse(BaseModel):
 
 
 class IncomeCreate(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+    )
+
     source: str = Field(min_length=1, max_length=100)
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0, allow_inf_nan=False)
     created_at: Optional[datetime] = None
 
 
