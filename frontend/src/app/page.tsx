@@ -17,6 +17,7 @@ import ChartSection from "@/components/ChartSection";
 import CategoryPieChart from "@/components/CategoryPieChart";
 import BudgetSection from "@/components/BudgetSection";
 import ErrorState from "@/components/ErrorState";
+import IncomeForm from "@/components/IncomeForm";
 
 import type {
   Category,
@@ -26,6 +27,8 @@ import type {
   Stats,
   Balance,
   BudgetStatus,
+  IncomeCreate,
+  IncomeItem,
 } from "@/types/api";
 
 type ExpenseDeleteError = {
@@ -40,16 +43,16 @@ function getExpenseCreateErrorMessage(error: unknown): string {
     error.name === "TimeoutError"
   ) {
     return (
-      "Сервер не ответил вовремя. Расход мог сохраниться. " +
-      "Обновите список расходов перед повторной отправкой."
+      "The server did not respond in time. The expense may have been saved. " +
+      "Check your expense records before submitting again."
     );
   }
 
   if (error instanceof ApiError) {
     if (error.status === 422) {
       return (
-        "Проверьте данные расхода: название — от 1 до 100 символов, " +
-        "сумма — больше нуля, категория и дата должны быть корректными."
+        "Check the expense details: description must contain 1–100 characters, " +
+        "amount must be positive, and category and date must be valid."
       );
     }
 
@@ -63,26 +66,26 @@ function getExpenseCreateErrorMessage(error: unknown): string {
       body.detail === "Category not found"
     ) {
       return (
-        "Выбранная категория больше недоступна. " +
-        "Обновите страницу и выберите существующую категорию."
+        "The selected category is no longer available. " +
+        "Refresh the page and select an existing category."
       );
     }
 
     if (error.status >= 500 && error.status <= 599) {
-      return "Сервер временно не может сохранить расход. Попробуйте позже.";
+      return "The server could not save the expense. Try again later.";
     }
 
-    return "Не удалось сохранить расход. Попробуйте ещё раз.";
+    return "Could not save the expense. Please try again.";
   }
 
   if (error instanceof TypeError) {
     return (
-      "Не удалось связаться с сервером. " +
-      "Проверьте соединение и попробуйте ещё раз."
+      "Could not reach the server. " +
+      "Check your connection."
     );
   }
 
-  return "Не удалось сохранить расход. Попробуйте ещё раз.";
+  return "Could not save the expense. Please try again.";
 }
 
 
@@ -108,6 +111,7 @@ export default function Page() {
   const [isExpenseSaving, setIsExpenseSaving] = useState(false);
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
   const [expenseDeleteError, setExpenseDeleteError] = useState<ExpenseDeleteError | null>(null);
+  const [operationType, setOperationType] = useState<"expense" | "income">("expense");
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -122,14 +126,14 @@ export default function Page() {
       return;
     }
     if (!title.trim() || !amount || !categoryId) {
-      setExpenseFormError("Введите название, сумму и выберите категорию.");
+      setExpenseFormError("Enter a description, amount, and category.");
       return;
     }
 
     const parsedAmount = Number(amount);
 
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setExpenseFormError("Сумма расхода должна быть больше нуля.");
+      setExpenseFormError("Expense amount must be greater than zero.");
       return;
     }
 
@@ -163,6 +167,21 @@ export default function Page() {
       setIsExpenseSaving(false);
     }
   };
+
+
+  const addIncome = async (income: IncomeCreate): Promise<void> => {
+    await apiFetch<IncomeItem>("/incomes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(income),
+    });
+
+    setIsDashboardLoading(true);
+    setRefreshKey((key) => key + 1);
+  };
+
 
   const createCategory = async (name: string) => {
     const params = new URLSearchParams({ name });
@@ -244,7 +263,7 @@ export default function Page() {
           console.error("Failed to load categories", error);
 
           setCategoriesError(
-            "Не удалось загрузить категории. Попробуйте ещё раз.",
+            "Could not load categories.Please try again.",
           );
         }
       } finally {
@@ -402,27 +421,65 @@ export default function Page() {
             <div className="space-y-6">
 
               {/* ADD FORM */}
-              <ExpenseForm
-                title={title}
-                amount={amount}
-                categoryId={categoryId}
-                createdAt={createdAt}
-                errorMessage={expenseFormError}
-                isSaving={isExpenseSaving}
+              <div
+                className="flex gap-2"
+                role="group"
+                aria-label="Transaction type"
+              >
+                <button
+                  type="button"
+                  aria-pressed={operationType === "expense"}
+                  onClick={() => setOperationType("expense")}
+                  className={`rounded-lg px-4 py-2 ${operationType === "expense"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700"
+                    }`}
+                >
+                  Expense
+                </button>
 
-                categories={categories}
-                isCategoriesLoading={isCategoriesLoading}
-                categoriesError={categoriesError}
-                onCategoriesRetry={handleCategoriesRetry}
+                <button
+                  type="button"
+                  aria-pressed={operationType === "income"}
+                  onClick={() => setOperationType("income")}
+                  className={`rounded-lg px-4 py-2 ${operationType === "income"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700"
+                    }`}
+                >
+                  Income
+                </button>
+              </div>
 
-                setTitle={setTitle}
-                setAmount={setAmount}
-                setCategoryId={setCategoryId}
-                setCreatedAt={setCreatedAt}
 
-                onSubmit={addExpense}
-                onCreateCategory={createCategory}
-              />
+              <div hidden={operationType !== "expense"}>
+                <ExpenseForm
+                  title={title}
+                  amount={amount}
+                  categoryId={categoryId}
+                  createdAt={createdAt}
+                  errorMessage={expenseFormError}
+                  isSaving={isExpenseSaving}
+
+                  categories={categories}
+                  isCategoriesLoading={isCategoriesLoading}
+                  categoriesError={categoriesError}
+                  onCategoriesRetry={handleCategoriesRetry}
+
+                  setTitle={setTitle}
+                  setAmount={setAmount}
+                  setCategoryId={setCategoryId}
+                  setCreatedAt={setCreatedAt}
+
+                  onSubmit={addExpense}
+                  onCreateCategory={createCategory}
+                />
+              </div>
+
+              <div hidden={operationType !== "income"}>
+                <IncomeForm onCreate={addIncome} />
+              </div>
+
 
               {/* EXPENSE LIST */}
               <ExpenseList

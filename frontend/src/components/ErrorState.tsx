@@ -23,7 +23,7 @@ export default function ErrorState({
           onClick={onRetry}
           className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white"
         >
-          Повторить
+          Retry
         </button>
       )}
     </div>

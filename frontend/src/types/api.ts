@@ -64,3 +64,16 @@ export type Stats = {
 export type Balance = {
     balance: number;
 };
+
+export type IncomeCreate = {
+    source: string;
+    amount: number;
+    created_at: string;
+};
+
+export type IncomeItem = {
+    id: number;
+    source: string;
+    amount: number;
+    created_at: string;
+};

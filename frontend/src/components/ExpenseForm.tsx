@@ -54,7 +54,7 @@ export default function ExpenseForm({
 
   return (
     <div className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
+      <h2 className="mb-4 text-lg font-semibold">Add expense</h2>
 
       {errorMessage && (
         <div
@@ -65,23 +65,35 @@ export default function ExpenseForm({
         </div>
       )}
 
+      <label htmlFor="expense-title" className="mb-1 block text-sm">
+        Description
+      </label>
       <input
-        className="w-full mb-2 p-2 border rounded"
-        placeholder="Title"
+        id="expense-title"
+        className="mb-3 w-full rounded border p-2"
+        placeholder="e.g. Groceries"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
 
+      <label htmlFor="expense-amount" className="mb-1 block text-sm">
+        Amount
+      </label>
       <input
-        className="w-full mb-2 p-2 border rounded"
-        placeholder="Amount"
+        id="expense-amount"
+        className="mb-3 w-full rounded border p-2"
+        step="0.01"
         type="number"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
       />
 
+      <label htmlFor="expense-category" className="mb-1 block text-sm">
+        Category
+      </label>
       <select
-        className="w-full mb-2 p-2 border rounded disabled:cursor-not-allowed disabled:opacity-50"
+        id="expense-category"
+        className="mb-3 w-full rounded border p-2 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={areCategoriesUnavailable}
         aria-busy={isCategoriesLoading}
         value={isCreatingCategory ? NEW_CATEGORY_VALUE : categoryId}
@@ -97,9 +109,9 @@ export default function ExpenseForm({
       >
         <option value="">
           {isCategoriesLoading
-            ? "Загрузка категорий…"
+            ? "Loading categories…"
             : categoriesError
-              ? "Категории недоступны"
+              ? "Categories unavailable"
               : "Select category"}
         </option>
         {categories.map((c) => (
@@ -112,14 +124,14 @@ export default function ExpenseForm({
 
       {isCategoriesLoading && (
         <p className="mb-2 text-sm text-gray-500" role="status">
-          Загрузка категорий…
+          Loading categories…
         </p>
       )}
 
       {categoriesError && (
         <div className="mb-2">
           <ErrorState
-            title="Категории недоступны"
+            title="Categories unavailable"
             description={categoriesError}
             onRetry={onCategoriesRetry}
           />
@@ -128,7 +140,7 @@ export default function ExpenseForm({
 
       {!areCategoriesUnavailable && categories.length === 0 && (
         <p className="mb-2 text-sm text-gray-600">
-          Категорий пока нет. Выберите «+ Add a category», чтобы создать первую.
+          No categories yet. Select “+ Add a category” to create your first one.
         </p>
       )}
 
@@ -141,8 +153,12 @@ export default function ExpenseForm({
         </div>
       )}
 
+      <label htmlFor="expense-date" className="mb-1 block text-sm">
+        Date
+      </label>
       <input
-        className="w-full mb-2 p-2 border rounded"
+        id="expense-date"
+        className="mb-3 w-full rounded border p-2"
         type="date"
         value={createdAt}
         onChange={(e) => setCreatedAt(e.target.value)}
@@ -152,9 +168,9 @@ export default function ExpenseForm({
         type="button"
         onClick={onSubmit}
         disabled={isSaving || areCategoriesUnavailable}
-        className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSaving ? "Сохранение…" : "Add"}
+        {isSaving ? "Saving…" : "Add expense"}
       </button>
     </div>
   );
