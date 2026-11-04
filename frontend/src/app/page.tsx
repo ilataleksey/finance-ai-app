@@ -18,6 +18,7 @@ import CategoryPieChart from "@/components/CategoryPieChart";
 import BudgetSection from "@/components/BudgetSection";
 import ErrorState from "@/components/ErrorState";
 import IncomeForm from "@/components/IncomeForm";
+import IncomeList from "@/components/IncomeList";
 
 import type {
   Category,
@@ -98,6 +99,7 @@ export default function Page() {
   const [categoriesRefreshKey, setCategoriesRefreshKey] = useState(0);
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [incomes, setIncomes] = useState<IncomeItem[]>([]);
   const [dateRange, setDateRange] = useState(() => getPeriodDateRange("month"));
   const [summaryData, setSummaryData] = useState<CategorySummary[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -293,23 +295,27 @@ export default function Page() {
           statsData,
           balanceData,
           budgetStatusData,
+          incomesData,
         ] = await Promise.all([
           apiFetch<ExpenseItem[]>(`/expenses/list?${query}`, { signal: controller.signal }),
           apiFetch<DailyExpense[]>(`/expenses/daily?${query}`, { signal: controller.signal }),
           apiFetch<CategorySummary[]>(`/expenses/summary?${query}`, { signal: controller.signal }),
           apiFetch<Stats>(`/expenses/stats?${query}`, { signal: controller.signal }),
           apiFetch<Balance>("/balance", { signal: controller.signal }),
-          apiFetch<BudgetStatus[]>(
-            `/budgets/status?year=${budgetPeriod.year}&month=${budgetPeriod.month}`,
-            { signal: controller.signal },
-          ),
+          apiFetch<BudgetStatus[]>(`/budgets/status?year=${budgetPeriod.year}&month=${budgetPeriod.month}`, { signal: controller.signal },),
+          apiFetch<IncomeItem[]>(`/incomes?${query}`, { signal: controller.signal, }),
         ]);
 
         if (controller.signal.aborted) {
           return;
         }
 
+        if (!Array.isArray(incomesData)) {
+          throw new Error("Expected income records to be an array");
+        }
+
         setExpenses(Array.isArray(expensesData) ? expensesData : []);
+        setIncomes(incomesData);
         setChartData(Array.isArray(chartData) ? chartData : []);
         setSummaryData(Array.isArray(summaryData) ? summaryData : []);
         setStats(statsData);
@@ -489,6 +495,13 @@ export default function Page() {
                 isLoading={isDashboardLoading}
                 deletingExpenseId={deletingExpenseId}
                 deleteError={expenseDeleteError}
+              />
+
+
+              <IncomeList
+                incomes={incomes}
+                isLoading={isDashboardLoading}
+                formatCurrency={formatCurrency}
               />
 
             </div>

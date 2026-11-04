@@ -9,7 +9,7 @@ from database import engine
 from dependencies import get_db
 from api.routers import expenses
 from typing import List, Any
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 import schemas
 import models
 
@@ -98,9 +98,31 @@ def create_income(
 
 
 @app.get("/incomes", response_model=List[schemas.IncomeResponse])
-def get_incomes(db: Session = Depends(get_db)):
-    return db.query(models.Income).order_by(
-        models.Income.created_at.desc()
+def get_incomes(
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Income)
+
+    if start_date:
+        query = query.filter(
+            models.Income.created_at >= start_date
+        )
+
+    if end_date:
+        next_day_start = datetime.combine(
+            end_date.date() + timedelta(days=1),
+            datetime.min.time(),
+        )
+
+        query = query.filter(
+            models.Income.created_at < next_day_start
+        )
+
+    return query.order_by(
+        models.Income.created_at.desc(),
+        models.Income.id.desc(),
     ).all()
 
 
