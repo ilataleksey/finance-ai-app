@@ -26,6 +26,18 @@ class Expense(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 
+class IncomeSource(Base):
+    __tablename__ = "income_sources"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    normalized_name = Column(
+        String,
+        nullable=False,
+        unique=True,
+    )
+
+
 class Income(Base):
     __tablename__ = "incomes"
 

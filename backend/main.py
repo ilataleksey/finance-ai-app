@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from database import engine
 from dependencies import get_db
-from api.routers import expenses
+from api.routers import expenses, income_sources
 from typing import List, Any
 from datetime import datetime, UTC, timedelta
 import schemas
@@ -42,6 +42,7 @@ app.add_middleware(
 # создает таблицы в БД
 models.Base.metadata.create_all(bind=engine)
 app.include_router(expenses.router)
+app.include_router(income_sources.router)
 
 
 @app.post("/categories", response_model=schemas.CategoryResponse)
