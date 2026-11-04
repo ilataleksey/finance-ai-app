@@ -12,13 +12,14 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import AppNavigation from "@/components/AppNavigation";
 import DashboardCards from "@/components/DashboardCards";
 import ExpenseForm from "@/components/ExpenseForm";
-import ExpenseList from "@/components/ExpenseList";
 import ChartSection from "@/components/ChartSection";
 import CategoryPieChart from "@/components/CategoryPieChart";
 import BudgetSection from "@/components/BudgetSection";
 import ErrorState from "@/components/ErrorState";
 import IncomeForm from "@/components/IncomeForm";
-import IncomeList from "@/components/IncomeList";
+import TransactionList from "@/components/TransactionList";
+import { buildTransactions } from "@/utils/transactions";
+import type { TransactionFilter } from "@/types/transactions";
 
 import type {
   Category,
@@ -114,6 +115,7 @@ export default function Page() {
   const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
   const [expenseDeleteError, setExpenseDeleteError] = useState<ExpenseDeleteError | null>(null);
   const [operationType, setOperationType] = useState<"expense" | "income">("expense");
+  const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>("all");
 
   const { startDate, endDate } = dateRange;
   const budgetPeriod = getBudgetPeriod(endDate);
@@ -219,7 +221,7 @@ export default function Page() {
 
       setExpenseDeleteError({
         expenseId: id,
-        message: "Не удалось удалить расход. Попробуйте ещё раз.",
+        message: "Could not delete the expense. Please try again.",
       });
     } finally {
       setDeletingExpenseId(null);
@@ -364,6 +366,15 @@ export default function Page() {
     setDateRange((currentRange) => ({ ...currentRange, endDate: value }));
   };
 
+  const transactions = buildTransactions(expenses, incomes);
+
+  const visibleTransactions = transactions.filter((transaction) => {
+    return (
+      transactionFilter === "all" ||
+      transaction.type === transactionFilter
+    );
+  });
+
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
@@ -487,22 +498,18 @@ export default function Page() {
               </div>
 
 
-              {/* EXPENSE LIST */}
-              <ExpenseList
-                expenses={expenses}
-                formatCurrency={formatCurrency}
-                onDelete={deleteExpense}
+              {/* TRANSACTION LIST */}
+              <TransactionList
+                transactions={visibleTransactions}
+                filter={transactionFilter}
+                onFilterChange={setTransactionFilter}
                 isLoading={isDashboardLoading}
+                formatCurrency={formatCurrency}
+                onDeleteExpense={deleteExpense}
                 deletingExpenseId={deletingExpenseId}
                 deleteError={expenseDeleteError}
               />
 
-
-              <IncomeList
-                incomes={incomes}
-                isLoading={isDashboardLoading}
-                formatCurrency={formatCurrency}
-              />
 
             </div>
           </div>
