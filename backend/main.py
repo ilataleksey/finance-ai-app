@@ -145,6 +145,25 @@ def get_incomes(
     ).all()
 
 
+@app.delete("/incomes/{income_id}", status_code=204)
+def delete_income(
+    income_id: int,
+    db: Session = Depends(get_db),
+):
+    income = db.query(models.Income).filter(
+        models.Income.id == income_id
+    ).first()
+
+    if income is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Income not found",
+        )
+
+    db.delete(income)
+    db.commit()
+
+
 @app.get("/balance")
 def get_balance(db: Session = Depends(get_db)):
     total_income = db.query(

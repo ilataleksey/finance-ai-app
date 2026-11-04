@@ -10,3 +10,12 @@ export type TransactionItem = {
   createdAt: string;
   categoryName?: string;
 };
+
+export type TransactionReference = {
+  id: number;
+  type: TransactionType;
+};
+
+export type TransactionDeleteError = TransactionReference & {
+  message: string;
+};

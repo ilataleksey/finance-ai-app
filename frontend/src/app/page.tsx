@@ -19,7 +19,12 @@ import ErrorState from "@/components/ErrorState";
 import IncomeForm from "@/components/IncomeForm";
 import TransactionList from "@/components/TransactionList";
 import { buildTransactions } from "@/utils/transactions";
-import type { TransactionFilter } from "@/types/transactions";
+
+import type {
+  TransactionFilter,
+  TransactionReference,
+  TransactionDeleteError,
+} from "@/types/transactions";
 
 import type {
   Category,
@@ -32,11 +37,6 @@ import type {
   IncomeCreate,
   IncomeItem,
 } from "@/types/api";
-
-type ExpenseDeleteError = {
-  expenseId: number;
-  message: string;
-};
 
 
 function getExpenseCreateErrorMessage(error: unknown): string {
@@ -112,8 +112,8 @@ export default function Page() {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
   const [isExpenseSaving, setIsExpenseSaving] = useState(false);
-  const [deletingExpenseId, setDeletingExpenseId] = useState<number | null>(null);
-  const [expenseDeleteError, setExpenseDeleteError] = useState<ExpenseDeleteError | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<TransactionReference | null>(null);
+  const [transactionDeleteError, setTransactionDeleteError] = useState<TransactionDeleteError | null>(null);
   const [operationType, setOperationType] = useState<"expense" | "income">("expense");
   const [transactionFilter, setTransactionFilter] = useState<TransactionFilter>("all");
 
@@ -201,30 +201,47 @@ export default function Page() {
     setCategoryId(String(category.id));
   };
 
-  const deleteExpense = async (id: number) => {
-    if (deletingExpenseId !== null) {
+  const deleteTransaction = async (
+    transaction: TransactionReference,
+  ) => {
+    if (deletingTransaction !== null) {
       return;
     }
 
-    setDeletingExpenseId(id);
-    setExpenseDeleteError(null);
+    setDeletingTransaction(transaction);
+    setTransactionDeleteError(null);
+
+    const resource =
+      transaction.type === "income" ? "incomes" : "expenses";
 
     try {
-      await apiFetch(`/expenses/${id}`, {
+      await apiFetch(`/${resource}/${transaction.id}`, {
         method: "DELETE",
       });
 
       setIsDashboardLoading(true);
       setRefreshKey((key) => key + 1);
     } catch (error) {
-      console.error("Failed to delete expense", error);
+      console.error("Failed to delete transaction", error);
 
-      setExpenseDeleteError({
-        expenseId: id,
-        message: "Could not delete the expense. Please try again.",
+      if (error instanceof ApiError && error.status === 404) {
+        setIsDashboardLoading(true);
+        setRefreshKey((key) => key + 1);
+        return;
+      }
+
+      const message =
+        error instanceof DOMException && error.name === "TimeoutError"
+          ? "The server did not respond in time. Refresh the page to check whether the transaction was deleted."
+          : "Could not delete the transaction. Please try again.";
+
+      setTransactionDeleteError({
+        id: transaction.id,
+        type: transaction.type,
+        message,
       });
     } finally {
-      setDeletingExpenseId(null);
+      setDeletingTransaction(null);
     }
   };
 
@@ -505,9 +522,9 @@ export default function Page() {
                 onFilterChange={setTransactionFilter}
                 isLoading={isDashboardLoading}
                 formatCurrency={formatCurrency}
-                onDeleteExpense={deleteExpense}
-                deletingExpenseId={deletingExpenseId}
-                deleteError={expenseDeleteError}
+                onDelete={deleteTransaction}
+                deletingTransaction={deletingTransaction}
+                deleteError={transactionDeleteError}
               />
 
 

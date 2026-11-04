@@ -1,9 +1,12 @@
 import EmptyState from "@/components/EmptyState";
 import { formatDisplayName } from "@/utils/formatDisplayName";
 
+
 import type {
   TransactionFilter,
   TransactionItem,
+  TransactionReference,
+  TransactionDeleteError,
 } from "@/types/transactions";
 
 type TransactionListProps = {
@@ -12,12 +15,9 @@ type TransactionListProps = {
   onFilterChange: (filter: TransactionFilter) => void;
   isLoading: boolean;
   formatCurrency: (value: number) => string;
-  onDeleteExpense: (id: number) => void;
-  deletingExpenseId: number | null;
-  deleteError: {
-    expenseId: number;
-    message: string;
-  } | null;
+  onDelete: (transaction: TransactionReference) => void;
+  deletingTransaction: TransactionReference | null;
+  deleteError: TransactionDeleteError | null;
 };
 
 const filters: {
@@ -35,8 +35,8 @@ export default function TransactionList({
   onFilterChange,
   isLoading,
   formatCurrency,
-  onDeleteExpense,
-  deletingExpenseId,
+  onDelete,
+  deletingTransaction,
   deleteError,
 }: TransactionListProps) {
   return (
@@ -90,9 +90,13 @@ export default function TransactionList({
           transactions.map((transaction) => {
             const isIncome = transaction.type === "income";
 
+            const isDeleting =
+              deletingTransaction?.type === transaction.type &&
+              deletingTransaction?.id === transaction.id;
+
             const rowError =
-              !isIncome &&
-                deleteError?.expenseId === transaction.id
+              deleteError?.type === transaction.type &&
+                deleteError?.id === transaction.id
                 ? deleteError.message
                 : null;
 
@@ -138,19 +142,20 @@ export default function TransactionList({
                     {formatCurrency(transaction.amount)}
                   </div>
 
-                  {!isIncome && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteExpense(transaction.id)}
-                      disabled={deletingExpenseId !== null}
-                      aria-label={`Delete expense: ${transaction.description}`}
-                      className="text-sm text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {deletingExpenseId === transaction.id
-                        ? "Deleting…"
-                        : "Delete"}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDelete({
+                        id: transaction.id,
+                        type: transaction.type,
+                      })
+                    }
+                    disabled={deletingTransaction !== null}
+                    aria-label={`Delete ${transaction.type}: ${transaction.description}`}
+                    className="text-sm text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isDeleting ? "Deleting…" : "Delete"}
+                  </button>
                 </div>
               </div>
             );
