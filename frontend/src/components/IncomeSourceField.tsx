@@ -64,12 +64,12 @@ export default function IncomeSourceField({
   }, [refreshKey]);
 
   const retry = () => {
-    if (isLoading || disabled) {
-      setIsCreating(false);
-      setCreateError(null);
+    if (isLoading || disabled || isSubmitting) {
       return;
     }
 
+    setIsCreating(false);
+    setCreateError(null);
     onChange("");
     setLoadError(null);
     setIsLoading(true);

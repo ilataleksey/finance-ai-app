@@ -49,6 +49,12 @@ app.include_router(income_sources.router)
 def create_category(name: str, db: Session = Depends(get_db)):
     normalized_name = name.strip().lower()
 
+    if not 1 <= len(normalized_name) <= 100:
+        raise HTTPException(
+            status_code=422,
+            detail="Category name must contain 1–100 characters",
+        )
+
     existing = db.query(models.Category).filter(
         func.lower(models.Category.name) == normalized_name
     ).first()
