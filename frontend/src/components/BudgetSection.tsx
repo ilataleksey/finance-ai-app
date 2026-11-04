@@ -1,5 +1,7 @@
 import type { BudgetStatus } from "@/types/api";
 
+import { formatDisplayName } from "@/utils/formatDisplayName";
+
 type BudgetSectionProps = {
   budgetStatus: BudgetStatus[];
   formatCurrency: (value: number) => string;
@@ -47,8 +49,8 @@ export default function BudgetSection({
             return (
               <div key={item.category}>
                 <div className="flex items-center justify-between mb-1 gap-4">
-                  <div className="font-medium capitalize">
-                    {item.category}
+                  <div className="font-medium">
+                    {formatDisplayName(item.category)}
                   </div>
 
                   <div className="text-sm text-gray-600 whitespace-nowrap">

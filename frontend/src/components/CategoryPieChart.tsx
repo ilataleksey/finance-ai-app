@@ -7,6 +7,7 @@ import {
 
 import type { CategorySummary } from "@/types/api";
 import EmptyState from "./EmptyState";
+import { formatDisplayName } from "@/utils/formatDisplayName";
 
 type CategoryPieChartProps = {
   summaryData: CategorySummary[];
@@ -30,6 +31,7 @@ export default function CategoryPieChart({
 }: CategoryPieChartProps) {
   const chartData = summaryData.map((item, index) => ({
     ...item,
+    displayName: formatDisplayName(item.category),
     fill: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
     total: Number(item.total),
   }));
@@ -59,7 +61,7 @@ export default function CategoryPieChart({
                 <Pie
                   data={chartData}
                   dataKey="total"
-                  nameKey="category"
+                  nameKey="displayName"
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
@@ -74,7 +76,7 @@ export default function CategoryPieChart({
           <div className="space-y-2">
             {summaryData.map((item, index) => (
               <div
-                key={item.category}
+                key={formatDisplayName(item.category)}
                 className="flex items-center gap-2"
               >
                 <div
@@ -84,8 +86,8 @@ export default function CategoryPieChart({
                       CATEGORY_COLORS[index % CATEGORY_COLORS.length],
                   }}
                 />
-                <div className="capitalize whitespace-nowrap">
-                  {item.category}
+                <div className="whitespace-nowrap">
+                  {formatDisplayName(item.category)}
                 </div>
                 <div className="font-semibold whitespace-nowrap">
                   ${formatCurrency(item.total)}

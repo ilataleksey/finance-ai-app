@@ -5,6 +5,8 @@ import type { Category } from "@/types/api";
 
 import ErrorState from "@/components/ErrorState";
 
+import { formatDisplayName } from "@/utils/formatDisplayName";
+
 const NEW_CATEGORY_VALUE = "__new_category__";
 
 type ExpenseFormProps = {
@@ -116,7 +118,7 @@ export default function ExpenseForm({
         </option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.name}
+            {formatDisplayName(c.name)}
           </option>
         ))}
         <option value={NEW_CATEGORY_VALUE}>+ Add a category</option>

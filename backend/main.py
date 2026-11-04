@@ -84,17 +84,29 @@ def health():
 
 @app.post("/incomes", response_model=schemas.IncomeResponse)
 def create_income(
-        income: schemas.IncomeCreate,
-        db: Session = Depends(get_db)
+    income: schemas.IncomeCreate,
+    db: Session = Depends(get_db),
 ):
+    source = db.query(models.IncomeSource).filter(
+        models.IncomeSource.id == income.source_id
+    ).first()
+
+    if source is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Income source not found",
+        )
+
     db_income = models.Income(
-        source=income.source,
+        source_id=source.id,
         amount=income.amount,
         created_at=income.created_at or datetime.now(UTC),
     )
+
     db.add(db_income)
     db.commit()
     db.refresh(db_income)
+
     return db_income
 
 

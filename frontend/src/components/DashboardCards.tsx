@@ -1,5 +1,7 @@
 import { DashboardCardProps } from "@/types/dashboard";
 
+import { formatDisplayName } from "@/utils/formatDisplayName";
+
 export default function DashboardCards({
   stats,
   balance,
@@ -43,7 +45,9 @@ export default function DashboardCards({
       <div className="bg-white p-4 rounded-xl shadow">
         <div className="text-sm text-gray-500">Top Category</div>
         <div className="text-2xl font-bold mt-2">
-          {stats?.top_category ?? "-"}
+          {stats?.top_category
+            ? formatDisplayName(stats.top_category)
+            : "-"}
         </div>
       </div>
     </div>

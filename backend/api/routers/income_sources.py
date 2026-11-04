@@ -32,7 +32,8 @@ def create_income_source(
     source: schemas.IncomeSourceCreate,
     db: Session = Depends(get_db),
 ):
-    normalized_name = source.name.casefold()
+    name = source.name.strip().lower()
+    normalized_name = name.casefold()
 
     existing = db.query(models.IncomeSource).filter(
         models.IncomeSource.normalized_name == normalized_name
@@ -45,7 +46,7 @@ def create_income_source(
         )
 
     db_source = models.IncomeSource(
-        name=source.name,
+        name=name,
         normalized_name=normalized_name,
     )
 

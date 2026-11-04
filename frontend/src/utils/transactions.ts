@@ -20,7 +20,7 @@ export function buildTransactions(
         (income) => ({
             id: income.id,
             type: "income",
-            description: income.source,
+            description: income.source.name,
             amount: income.amount,
             createdAt: income.created_at,
         }),

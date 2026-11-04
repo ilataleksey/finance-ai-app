@@ -65,15 +65,21 @@ export type Balance = {
     balance: number;
 };
 
+export type IncomeSource = {
+    id: number;
+    name: string;
+};
+
 export type IncomeCreate = {
-    source: string;
+    source_id: number;
     amount: number;
     created_at: string;
 };
 
 export type IncomeItem = {
     id: number;
-    source: string;
+    source_id: number;
+    source: IncomeSource;
     amount: number;
     created_at: string;
 };

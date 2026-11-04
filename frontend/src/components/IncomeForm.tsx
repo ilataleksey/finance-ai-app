@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ApiError } from "@/services/api";
 import type { IncomeCreate } from "@/types/api";
 import { formatLocalDate } from "@/utils/dateRange";
+import IncomeSourceField from "@/components/IncomeSourceField";
 
 type IncomeFormProps = {
   onCreate: (income: IncomeCreate) => Promise<void>;
@@ -20,6 +21,9 @@ function getIncomeErrorMessage(error: unknown): string {
   }
 
   if (error instanceof ApiError) {
+    if (error.status === 404) {
+      return "Income source not found. Reload sources and select an existing one.";
+    }
     if (error.status === 422) {
       return "Check the source, positive amount, and income date.";
     }
@@ -39,7 +43,7 @@ function getIncomeErrorMessage(error: unknown): string {
 }
 
 export default function IncomeForm({ onCreate }: IncomeFormProps) {
-  const [source, setSource] = useState("");
+  const [sourceId, setSourceId] = useState("");
   const [amount, setAmount] = useState("");
   const [createdAt, setCreatedAt] = useState(
     () => formatLocalDate(new Date()),
@@ -56,14 +60,10 @@ export default function IncomeForm({ onCreate }: IncomeFormProps) {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const normalizedSource = source.trim();
     const parsedAmount = Number(amount);
 
-    if (
-      normalizedSource.length === 0 ||
-      normalizedSource.length > 100
-    ) {
-      setErrorMessage("Source must contain between 1 and 100 characters.");
+    if (!sourceId) {
+      setErrorMessage("Select an income source.");
       return;
     }
 
@@ -81,12 +81,11 @@ export default function IncomeForm({ onCreate }: IncomeFormProps) {
 
     try {
       await onCreate({
-        source: normalizedSource,
+        source_id: Number(sourceId),
         amount: parsedAmount,
         created_at: createdAt,
       });
 
-      setSource("");
       setAmount("");
       setSuccessMessage("Income saved.");
     } catch (error) {
@@ -119,19 +118,13 @@ export default function IncomeForm({ onCreate }: IncomeFormProps) {
         </p>
       )}
 
-      <label htmlFor="income-source" className="mb-1 block text-sm">
-        Source
-      </label>
-      <input
-        id="income-source"
-        className="mb-3 w-full rounded border p-2"
-        placeholder="e.g. Salary"
-        value={source}
-        disabled={isSaving}
-        onChange={(event) => {
-          setSource(event.target.value);
+      <IncomeSourceField
+        value={sourceId}
+        onChange={(value) => {
+          setSourceId(value);
           setSuccessMessage(null);
         }}
+        disabled={isSaving}
       />
 
       <label htmlFor="income-amount" className="mb-1 block text-sm">

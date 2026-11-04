@@ -1,4 +1,5 @@
 import EmptyState from "@/components/EmptyState";
+import { formatDisplayName } from "@/utils/formatDisplayName";
 
 import type {
   TransactionFilter,
@@ -63,8 +64,8 @@ export default function TransactionList({
             aria-pressed={filter === item.value}
             onClick={() => onFilterChange(item.value)}
             className={`rounded-lg px-3 py-2 text-sm ${filter === item.value
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
           >
             {item.label}
@@ -102,13 +103,15 @@ export default function TransactionList({
               >
                 <div className="min-w-0">
                   <div className="break-words font-medium">
-                    {transaction.description}
+                    {isIncome
+                      ? formatDisplayName(transaction.description)
+                      : transaction.description}
                   </div>
 
                   <div className="text-sm text-gray-500">
                     {isIncome ? "Income" : "Expense"}
                     {transaction.categoryName
-                      ? ` · ${transaction.categoryName}`
+                      ? ` · ${formatDisplayName(transaction.categoryName)}`
                       : ""}
                   </div>
 

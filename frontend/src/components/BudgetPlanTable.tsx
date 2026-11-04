@@ -6,6 +6,8 @@ import type { BudgetPlan } from "@/types/api";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { isFutureMonth, MONTH_LABELS } from "@/utils/months";
 
+import { formatDisplayName } from "@/utils/formatDisplayName";
+
 type EditingCell = {
   categoryId: number;
   month: number;
@@ -33,10 +35,6 @@ function getPercentColor(percent: number): string {
   }
 
   return "text-green-700";
-}
-
-function formatCategoryName(name: string): string {
-  return name ? `${name[0].toUpperCase()}${name.slice(1)}` : name;
 }
 
 export default function BudgetPlanTable({
@@ -184,7 +182,7 @@ export default function BudgetPlanTable({
                   scope="row"
                   className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 text-left font-medium text-gray-900"
                 >
-                  {formatCategoryName(category.name)}
+                  {formatDisplayName(category.name)}
                 </th>
 
                 {months.map((period) => {
@@ -217,7 +215,7 @@ export default function BudgetPlanTable({
                             }
                           }}
                           disabled={isSaving}
-                          aria-label={`Budget for ${formatCategoryName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
+                          aria-label={`Budget for ${formatDisplayName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
                           className="w-24 rounded border border-blue-500 px-2 py-1 text-right text-sm outline-none ring-2 ring-blue-100 disabled:cursor-wait disabled:opacity-60"
                         />
                       ) : (
@@ -225,7 +223,7 @@ export default function BudgetPlanTable({
                           type="button"
                           onClick={() => startEditing(category.id, period.month, period.planned)}
                           disabled={isSaving}
-                          aria-label={`Edit budget for ${formatCategoryName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
+                          aria-label={`Edit budget for ${formatDisplayName(category.name)} in ${MONTH_LABELS[period.month - 1]}`}
                           className="min-h-7 rounded px-1 font-medium text-gray-900 transition-colors hover:bg-blue-50 hover:text-blue-700 disabled:cursor-wait disabled:opacity-60"
                         >
                           {isSaving

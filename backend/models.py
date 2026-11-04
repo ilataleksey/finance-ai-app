@@ -36,15 +36,26 @@ class IncomeSource(Base):
         nullable=False,
         unique=True,
     )
+    incomes = relationship("Income", back_populates="source")
 
 
 class Income(Base):
     __tablename__ = "incomes"
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(String)
-    amount = Column(Float)
 
+    source_id = Column(
+        Integer,
+        ForeignKey("income_sources.id"),
+        nullable=False,
+    )
+
+    source = relationship(
+        "IncomeSource",
+        back_populates="incomes",
+    )
+
+    amount = Column(Float)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 

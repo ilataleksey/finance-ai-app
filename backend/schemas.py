@@ -53,23 +53,21 @@ class IncomeSourceResponse(BaseModel):
 
 
 class IncomeCreate(BaseModel):
-    model_config = ConfigDict(
-        str_strip_whitespace=True,
-    )
-
-    source: str = Field(min_length=1, max_length=100)
+    source_id: int = Field(gt=0)
     amount: float = Field(gt=0, allow_inf_nan=False)
     created_at: Optional[datetime] = None
 
 
 class IncomeResponse(BaseModel):
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
     id: int
-    source: str
+    source_id: int
+    source: IncomeSourceResponse
     amount: float
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class BudgetCreate(BaseModel):
