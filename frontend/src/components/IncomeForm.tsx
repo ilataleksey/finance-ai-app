@@ -22,7 +22,7 @@ function getIncomeErrorMessage(error: unknown): string {
 
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return "Income source not found. Reload sources and select an existing one.";
+      return "Income source not found. Refresh the page and select an existing source.";
     }
     if (error.status === 422) {
       return "Check the source, positive amount, and income date.";
