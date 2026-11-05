@@ -1,15 +1,12 @@
-from http.client import responses
-
-from fastapi import FastAPI, Depends, Body, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic.v1.schema import normalize_name
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from database import engine
 from dependencies import get_db
-from api.routers import expenses, income_sources
-from typing import List, Any
-from datetime import datetime, UTC, timedelta
+from api.routers import expenses, incomes, income_sources
+from typing import List
+from datetime import datetime
 import schemas
 import models
 
@@ -43,6 +40,7 @@ app.add_middleware(
 models.Base.metadata.create_all(bind=engine)
 app.include_router(expenses.router)
 app.include_router(income_sources.router)
+app.include_router(incomes.router)
 
 
 @app.post("/categories", response_model=schemas.CategoryResponse)
@@ -86,82 +84,6 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-@app.post("/incomes", response_model=schemas.IncomeResponse)
-def create_income(
-    income: schemas.IncomeCreate,
-    db: Session = Depends(get_db),
-):
-    source = db.query(models.IncomeSource).filter(
-        models.IncomeSource.id == income.source_id
-    ).first()
-
-    if source is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Income source not found",
-        )
-
-    db_income = models.Income(
-        source_id=source.id,
-        amount=income.amount,
-        created_at=income.created_at or datetime.now(UTC),
-    )
-
-    db.add(db_income)
-    db.commit()
-    db.refresh(db_income)
-
-    return db_income
-
-
-@app.get("/incomes", response_model=List[schemas.IncomeResponse])
-def get_incomes(
-    start_date: datetime | None = None,
-    end_date: datetime | None = None,
-    db: Session = Depends(get_db),
-):
-    query = db.query(models.Income)
-
-    if start_date:
-        query = query.filter(
-            models.Income.created_at >= start_date
-        )
-
-    if end_date:
-        next_day_start = datetime.combine(
-            end_date.date() + timedelta(days=1),
-            datetime.min.time(),
-        )
-
-        query = query.filter(
-            models.Income.created_at < next_day_start
-        )
-
-    return query.order_by(
-        models.Income.created_at.desc(),
-        models.Income.id.desc(),
-    ).all()
-
-
-@app.delete("/incomes/{income_id}", status_code=204)
-def delete_income(
-    income_id: int,
-    db: Session = Depends(get_db),
-):
-    income = db.query(models.Income).filter(
-        models.Income.id == income_id
-    ).first()
-
-    if income is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Income not found",
-        )
-
-    db.delete(income)
-    db.commit()
 
 
 @app.get("/balance")
