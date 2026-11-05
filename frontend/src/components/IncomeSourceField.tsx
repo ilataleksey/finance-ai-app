@@ -110,12 +110,17 @@ export default function IncomeSourceField({
       setName("");
       setIsCreating(false);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setCreateError(
+          "This income source already exists. Select it from the list.",
+        );
+        return;
+      }
+
       console.error("Failed to create income source", error);
 
       setCreateError(
-        error instanceof ApiError && error.status === 409
-          ? "This income source already exists. Select it from the list."
-          : "Could not confirm creation. Check sources before trying again.",
+        "Could not confirm creation. Check sources before trying again.",
       );
     } finally {
       setIsSubmitting(false);
