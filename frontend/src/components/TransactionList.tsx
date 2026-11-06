@@ -18,6 +18,8 @@ type TransactionListProps = {
   onDelete: (transaction: TransactionReference) => void;
   deletingTransaction: TransactionReference | null;
   deleteError: TransactionDeleteError | null;
+  onEditExpense: (id: number) => void;
+  actionsDisabled: boolean;
 };
 
 const filters: {
@@ -38,6 +40,8 @@ export default function TransactionList({
   onDelete,
   deletingTransaction,
   deleteError,
+  onEditExpense,
+  actionsDisabled,
 }: TransactionListProps) {
   return (
     <section
@@ -142,6 +146,20 @@ export default function TransactionList({
                     {formatCurrency(transaction.amount)}
                   </div>
 
+
+                  {!isIncome && (
+                    <button
+                      type="button"
+                      onClick={() => onEditExpense(transaction.id)}
+                      disabled={actionsDisabled || deletingTransaction !== null}
+                      aria-label={`Edit expense: ${transaction.description}`}
+                      className="text-sm text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Edit
+                    </button>
+                  )}
+
+
                   <button
                     type="button"
                     onClick={() =>
@@ -150,7 +168,7 @@ export default function TransactionList({
                         type: transaction.type,
                       })
                     }
-                    disabled={deletingTransaction !== null}
+                    disabled={actionsDisabled || deletingTransaction !== null}
                     aria-label={`Delete ${transaction.type}: ${transaction.description}`}
                     className="text-sm text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >

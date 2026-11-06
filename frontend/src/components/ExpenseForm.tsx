@@ -16,6 +16,8 @@ type ExpenseFormProps = {
   createdAt: string;
   errorMessage: string | null;
   isSaving: boolean;
+  isEditing: boolean;
+  onCancelEdit: () => void;
 
   categories: Category[];
   isCategoriesLoading: boolean;
@@ -38,6 +40,8 @@ export default function ExpenseForm({
   createdAt,
   errorMessage,
   isSaving,
+  isEditing,
+  onCancelEdit,
 
   categories,
   isCategoriesLoading,
@@ -55,8 +59,13 @@ export default function ExpenseForm({
   const areCategoriesUnavailable = isCategoriesLoading || categoriesError !== null;
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
-      <h2 className="mb-4 text-lg font-semibold">Add expense</h2>
+    <fieldset
+      disabled={isSaving}
+      className="rounded-xl bg-white p-4 shadow"
+    >
+      <h2 className="mb-4 text-lg font-semibold">
+        {isEditing ? "Edit expense" : "Add expense"}
+      </h2>
 
       {errorMessage && (
         <div
@@ -172,8 +181,23 @@ export default function ExpenseForm({
         disabled={isSaving || areCategoriesUnavailable}
         className="w-full rounded bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSaving ? "Saving…" : "Add expense"}
+        {isSaving
+          ? "Saving…"
+          : isEditing
+            ? "Save changes"
+            : "Add expense"}
       </button>
-    </div>
+
+      {isEditing && (
+        <button
+          type="button"
+          onClick={onCancelEdit}
+          disabled={isSaving}
+          className="mt-2 w-full rounded border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      )}
+    </fieldset>
   );
 };

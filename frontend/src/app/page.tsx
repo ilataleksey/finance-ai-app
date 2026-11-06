@@ -39,14 +39,17 @@ import type {
 } from "@/types/api";
 
 
-function getExpenseCreateErrorMessage(error: unknown): string {
+function getExpenseSaveErrorMessage(
+  error: unknown,
+  isEditing: boolean,
+): string {
   if (
     error instanceof DOMException &&
     error.name === "TimeoutError"
   ) {
     return (
-      "The server did not respond in time. The expense may have been saved. " +
-      "Check your expense records before submitting again."
+      "The server did not respond in time. The changes may have been saved. " +
+      "Refresh the page to check the transaction before trying again."
     );
   }
 
@@ -64,13 +67,15 @@ function getExpenseCreateErrorMessage(error: unknown): string {
       error.status === 404 &&
       typeof body === "object" &&
       body !== null &&
-      "detail" in body &&
-      body.detail === "Category not found"
+      "detail" in body
     ) {
-      return (
-        "The selected category is no longer available. " +
-        "Refresh the page and select an existing category."
-      );
+      if (body.detail === "Category not found") {
+        return "The category is no longer available. Refresh the page and select an existing category.";
+      }
+
+      if (isEditing && body.detail === "Expense not found") {
+        return "This expense no longer exists. Cancel editing and refresh the page.";
+      }
     }
 
     if (error.status >= 500 && error.status <= 599) {
@@ -81,10 +86,7 @@ function getExpenseCreateErrorMessage(error: unknown): string {
   }
 
   if (error instanceof TypeError) {
-    return (
-      "Could not reach the server. " +
-      "Check your connection."
-    );
+    return "Could not reach the server. Check your connection.";
   }
 
   return "Could not save the expense. Please try again.";
@@ -112,6 +114,7 @@ export default function Page() {
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
   const [isExpenseSaving, setIsExpenseSaving] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
   const [deletingTransaction, setDeletingTransaction] = useState<TransactionReference | null>(null);
   const [transactionDeleteError, setTransactionDeleteError] = useState<TransactionDeleteError | null>(null);
   const [operationType, setOperationType] = useState<"expense" | "income">("expense");
@@ -125,12 +128,69 @@ export default function Page() {
   const [categoryId, setCategoryId] = useState("");
   const [createdAt, setCreatedAt] = useState(() => formatLocalDate(new Date()));
 
-  const addExpense = async () => {
-    if (isExpenseSaving || isCategoriesLoading || categoriesError !== null) {
+  const startExpenseEdit = (id: number) => {
+    if (
+      isExpenseSaving ||
+      deletingTransaction !== null ||
+      editingExpense !== null
+    ) {
       return;
     }
-    if (!title.trim() || !amount || !categoryId) {
-      setExpenseFormError("Enter a description, amount, and category.");
+
+    const expense = expenses.find((item) => item.id === id);
+
+    if (!expense) {
+      return;
+    }
+
+    setEditingExpense(expense);
+    setOperationType("expense");
+
+    setTitle(expense.title);
+    setAmount(String(expense.amount));
+    setCategoryId(String(expense.category.id));
+    setCreatedAt(expense.created_at.split("T")[0]);
+
+    setExpenseFormError(null);
+    setTransactionDeleteError(null);
+  };
+
+  const resetExpenseForm = () => {
+    setEditingExpense(null);
+    setTitle("");
+    setAmount("");
+    setCategoryId("");
+    setCreatedAt(formatLocalDate(new Date()));
+    setExpenseFormError(null);
+  };
+
+  const cancelExpenseEdit = () => {
+    if (isExpenseSaving) {
+      return;
+    }
+
+    resetExpenseForm();
+  };
+
+  const saveExpense = async () => {
+    if (
+      isExpenseSaving ||
+      deletingTransaction !== null ||
+      isCategoriesLoading ||
+      categoriesError !== null
+    ) {
+      return;
+    }
+
+    const normalizedTitle = title.trim();
+
+    if (
+      normalizedTitle.length === 0 ||
+      normalizedTitle.length > 100
+    ) {
+      setExpenseFormError(
+        "Description must contain between 1 and 100 characters.",
+      );
       return;
     }
 
@@ -141,32 +201,51 @@ export default function Page() {
       return;
     }
 
+    if (!categoryId || !createdAt) {
+      setExpenseFormError("Select a category and date.");
+      return;
+    }
+
+    const isEditing = editingExpense !== null;
+
+    const endpoint = editingExpense
+      ? `/expenses/${editingExpense.id}`
+      : "/expenses";
+
+    const savedDate =
+      editingExpense &&
+        createdAt === editingExpense.created_at.split("T")[0]
+        ? editingExpense.created_at
+        : createdAt;
+
     setExpenseFormError(null);
     setIsExpenseSaving(true);
 
     try {
-      await apiFetch("/expenses", {
-        method: "POST",
+      await apiFetch<ExpenseItem>(endpoint, {
+        method: isEditing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: title.trim(),
+          title: normalizedTitle,
           amount: parsedAmount,
           category_id: Number(categoryId),
-          created_at: createdAt,
+          created_at: savedDate,
         }),
       });
 
-      setTitle("");
-      setAmount("");
-      setCategoryId("");
+      resetExpenseForm();
       setIsDashboardLoading(true);
       setRefreshKey((key) => key + 1);
     } catch (error) {
-      console.error("Failed to create expense", error);
+      if (!(error instanceof ApiError) || error.status >= 500) {
+        console.error("Failed to save expense", error);
+      }
 
-      setExpenseFormError(getExpenseCreateErrorMessage(error));
+      setExpenseFormError(
+        getExpenseSaveErrorMessage(error, isEditing),
+      );
     } finally {
       setIsExpenseSaving(false);
     }
@@ -204,7 +283,11 @@ export default function Page() {
   const deleteTransaction = async (
     transaction: TransactionReference,
   ) => {
-    if (deletingTransaction !== null) {
+    if (
+      deletingTransaction !== null ||
+      isExpenseSaving ||
+      editingExpense !== null
+    ) {
       return;
     }
 
@@ -480,6 +563,7 @@ export default function Page() {
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700"
                     }`}
+                  disabled={editingExpense !== null || isExpenseSaving}
                 >
                   Income
                 </button>
@@ -505,8 +589,12 @@ export default function Page() {
                   setCategoryId={setCategoryId}
                   setCreatedAt={setCreatedAt}
 
-                  onSubmit={addExpense}
+                  onSubmit={saveExpense}
                   onCreateCategory={createCategory}
+
+                  key={editingExpense?.id ?? "new"}
+                  isEditing={editingExpense !== null}
+                  onCancelEdit={cancelExpenseEdit}
                 />
               </div>
 
@@ -525,6 +613,8 @@ export default function Page() {
                 onDelete={deleteTransaction}
                 deletingTransaction={deletingTransaction}
                 deleteError={transactionDeleteError}
+                onEditExpense={startExpenseEdit}
+                actionsDisabled={isExpenseSaving || editingExpense !== null}
               />
 
 
