@@ -234,6 +234,43 @@ def get_expenses_stats(
     }
 
 
+@router.put("/{expense_id}", response_model=schemas.ExpenseResponse)
+def update_expense(
+    expense_id: int,
+    expense: schemas.ExpenseUpdate,
+    db: Session = Depends(get_db),
+):
+    db_expense = db.query(models.Expense).filter(
+        models.Expense.id == expense_id
+    ).first()
+
+    if db_expense is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Expense not found",
+        )
+
+    category = db.query(models.Category).filter(
+        models.Category.id == expense.category_id
+    ).first()
+
+    if category is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found",
+        )
+
+    db_expense.title = expense.title
+    db_expense.amount = expense.amount
+    db_expense.category = category
+    db_expense.created_at = expense.created_at
+
+    db.commit()
+    db.refresh(db_expense)
+
+    return db_expense
+
+
 @router.delete("/{expense_id}")
 def delete_expense(
     expense_id: int,
