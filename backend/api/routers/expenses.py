@@ -194,15 +194,15 @@ def get_expenses_stats(
     avg_per_day = 0
 
     if expenses:
-        dates = [
-            e.created_at.date()
-            for e in expenses
+        expense_dates = [
+            expense.created_at.date()
+            for expense in expenses
         ]
 
-        days = (
-            max(dates) - min(dates)
-        ).days + 1
+        first_day = start_date.date() if start_date else min(expense_dates)
+        last_day = end_date.date() if end_date else max(expense_dates)
 
+        days = (last_day - first_day).days + 1
         avg_per_day = total_expenses / days
 
     category_totals = {}
