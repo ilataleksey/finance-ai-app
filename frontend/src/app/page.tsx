@@ -493,18 +493,33 @@ export default function Page() {
   ]);
 
   const handlePeriodChange = (nextPeriod: PeriodId) => {
-    setIsDashboardLoading(true);
+    const nextRange = getPeriodDateRange(nextPeriod);
+
     setPeriod(nextPeriod);
-    setDateRange(getPeriodDateRange(nextPeriod));
+
+    if (nextRange.startDate === startDate && nextRange.endDate === endDate) {
+      return;
+    }
+
+    setIsDashboardLoading(true);
+    setDateRange(nextRange);
   };
 
   const handleStartDateChange = (value: string) => {
+    if (value === startDate) {
+      return;
+    }
+
     setIsDashboardLoading(true);
     setPeriod(null);
     setDateRange((currentRange) => ({ ...currentRange, startDate: value }));
   };
 
   const handleEndDateChange = (value: string) => {
+    if (value === endDate) {
+      return;
+    }
+
     setIsDashboardLoading(true);
     setPeriod(null);
     setDateRange((currentRange) => ({ ...currentRange, endDate: value }));
