@@ -1,9 +1,11 @@
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+
+from api.date_ranges import start_of_next_day
 
 import models
 import schemas
@@ -14,15 +16,6 @@ router = APIRouter(
     prefix="/expenses",
     tags=["expenses"],
 )
-
-
-
-
-def get_end_of_day(date: datetime) -> datetime:
-    return datetime.combine(
-        date.date(),
-        time(23, 59, 59),
-    )
 
 
 @router.post("", response_model=schemas.ExpenseResponse)
@@ -95,8 +88,9 @@ def get_summary(
         query = query.filter(models.Expense.created_at >= start_date)
 
     if end_date:
-        end_of_day = get_end_of_day(end_date)
-        query = query.filter(models.Expense.created_at <= end_of_day)
+        query = query.filter(
+            models.Expense.created_at < start_of_next_day(end_date)
+        )
 
     results = (
         query.
@@ -126,8 +120,9 @@ def get_daily_expenses(
         query = query.filter(models.Expense.created_at >= start_date)
 
     if end_date:
-        end_of_day = get_end_of_day(end_date)
-        query = query.filter(models.Expense.created_at <= end_of_day)
+        query = query.filter(
+            models.Expense.created_at < start_of_next_day(end_date)
+        )
 
     result = query.group_by(
         func.date(models.Expense.created_at)
@@ -153,8 +148,9 @@ def get_expense_list(
         query = query.filter(models.Expense.created_at >= start_date)
 
     if end_date:
-        end_of_day = get_end_of_day(end_date)
-        query = query.filter(models.Expense.created_at <= end_of_day)
+        query = query.filter(
+            models.Expense.created_at < start_of_next_day(end_date)
+        )
 
     expenses = query.order_by(models.Expense.created_at.desc()).all()
 
@@ -185,8 +181,9 @@ def get_expenses_stats(
         query = query.filter(models.Expense.created_at >= start_date)
 
     if end_date:
-        end_of_day = get_end_of_day(end_date)
-        query = query.filter(models.Expense.created_at <= end_of_day)
+        query = query.filter(
+            models.Expense.created_at < start_of_next_day(end_date)
+        )
 
     expenses = query.order_by(models.Expense.created_at.desc()).all()
 

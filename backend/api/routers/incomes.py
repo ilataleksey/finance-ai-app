@@ -1,7 +1,9 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from api.date_ranges import start_of_next_day
 
 import models
 import schemas
@@ -55,13 +57,8 @@ def get_incomes(
         )
 
     if end_date:
-        next_day_start = datetime.combine(
-            end_date.date() + timedelta(days=1),
-            datetime.min.time(),
-        )
-
         query = query.filter(
-            models.Income.created_at < next_day_start
+            models.Income.created_at < start_of_next_day(end_date)
         )
 
     return query.order_by(
