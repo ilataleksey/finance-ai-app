@@ -58,6 +58,12 @@ class IncomeCreate(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class IncomeUpdate(BaseModel):
+    source_id: int = Field(gt=0)
+    amount: float = Field(gt=0, allow_inf_nan=False)
+    created_at: datetime
+
+
 class IncomeResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,

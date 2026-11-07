@@ -70,6 +70,42 @@ def get_incomes(
     ).all()
 
 
+@router.put("/{income_id}", response_model=schemas.IncomeResponse)
+def update_income(
+    income_id: int,
+    income: schemas.IncomeUpdate,
+    db: Session = Depends(get_db),
+):
+    db_income = db.query(models.Income).filter(
+        models.Income.id == income_id
+    ).first()
+
+    if db_income is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Income not found",
+        )
+
+    source = db.query(models.IncomeSource).filter(
+        models.IncomeSource.id == income.source_id
+    ).first()
+
+    if source is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Income source not found",
+        )
+
+    db_income.source = source
+    db_income.amount = income.amount
+    db_income.created_at = income.created_at
+
+    db.commit()
+    db.refresh(db_income)
+
+    return db_income
+
+
 @router.delete("/{income_id}", status_code=204)
 def delete_income(
     income_id: int,
