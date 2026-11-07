@@ -349,13 +349,13 @@ export default function Page() {
       setIsDashboardLoading(true);
       setRefreshKey((key) => key + 1);
     } catch (error) {
-      console.error("Failed to delete transaction", error);
-
       if (error instanceof ApiError && error.status === 404) {
         setIsDashboardLoading(true);
         setRefreshKey((key) => key + 1);
         return;
       }
+
+      console.error("Failed to delete transaction", error);
 
       const message =
         error instanceof DOMException && error.name === "TimeoutError"

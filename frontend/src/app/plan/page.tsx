@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AppNavigation from "@/components/AppNavigation";
 import BudgetPlanTable from "@/components/BudgetPlanTable";
 import CategoryCreator from "@/components/CategoryCreator";
+import ErrorState from "@/components/ErrorState";
 import PlanYearNavigator from "@/components/PlanYearNavigator";
 import { apiFetch } from "@/services/api";
 import type { Budget, BudgetPlan, Category } from "@/types/api";
@@ -18,6 +19,8 @@ export default function PlanPage() {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [plan, setPlan] = useState<BudgetPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [savingCell, setSavingCell] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
@@ -33,12 +36,12 @@ export default function PlanPage() {
 
         if (!controller.signal.aborted) {
           setPlan(data);
-          setError(null);
+          setLoadError(null);
         }
       } catch (loadError) {
         if (!controller.signal.aborted) {
-          console.error("Failed to load budget plan", loadError);
-          setError("Could not load the budget plan. Please try again.");
+          console.warn("Failed to load budget plan", loadError);
+          setLoadError("Could not load the budget plan. Please try again.");
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -50,21 +53,23 @@ export default function PlanPage() {
     void loadPlan();
 
     return () => controller.abort();
-  }, [year]);
+  }, [year, refreshKey]);
 
   const handleYearChange = (nextYear: number) => {
-    if (nextYear < MIN_PLAN_YEAR || nextYear > MAX_PLAN_YEAR) {
+    if (nextYear === year || nextYear < MIN_PLAN_YEAR || nextYear > MAX_PLAN_YEAR) {
       return;
     }
 
     setIsLoading(true);
+    setLoadError(null);
     setError(null);
     setYear(nextYear);
   };
 
-  const refreshPlan = async () => {
-    const data = await apiFetch<BudgetPlan>(`/budgets/plan?year=${year}`);
-    setPlan(data);
+  const refreshPlan = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    setRefreshKey((key) => key + 1);
   };
 
   const createCategory = async (name: string) => {
@@ -72,7 +77,7 @@ export default function PlanPage() {
     await apiFetch<Category>(`/categories?${params.toString()}`, {
       method: "POST",
     });
-    await refreshPlan();
+    refreshPlan();
   };
 
   const saveBudget = async (categoryId: number, month: number, amount: number) => {
@@ -94,7 +99,7 @@ export default function PlanPage() {
         }),
       });
 
-      await refreshPlan();
+      refreshPlan();
     } catch (saveError) {
       console.error("Failed to save budget", saveError);
       setError("Could not save the budget. Please try again.");
@@ -120,7 +125,7 @@ export default function PlanPage() {
         method: "DELETE",
       });
 
-      await refreshPlan();
+      refreshPlan();
     } catch (deleteError) {
       console.error("Failed to delete budget", deleteError);
       setError("Could not delete the budget. Please try again.");
@@ -175,13 +180,19 @@ export default function PlanPage() {
         </div>
       )}
 
-      {isLoading || !isCurrentPlanLoaded ? (
+      {isLoading ? (
         <div
           className="rounded-xl bg-white p-8 text-center text-sm text-gray-500 shadow-sm"
           role="status"
         >
           Loading budget plan…
         </div>
+      ) : loadError || !isCurrentPlanLoaded ? (
+        <ErrorState
+          title="Budget plan unavailable"
+          description={loadError ?? "No budget plan was loaded for this year."}
+          onRetry={refreshPlan}
+        />
       ) : plan.categories.length === 0 ? (
         <div className="rounded-xl bg-white p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900">No categories yet</h2>

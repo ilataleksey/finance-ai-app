@@ -6,7 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from database import DARABASE_URL, Base
-import models
+import models  # Register ORM tables in Base.metadata for autogenerate.
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

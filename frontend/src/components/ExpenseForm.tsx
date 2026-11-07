@@ -178,7 +178,7 @@ export default function ExpenseForm({
       <button
         type="button"
         onClick={onSubmit}
-        disabled={isSaving || areCategoriesUnavailable}
+        disabled={isSaving || areCategoriesUnavailable || isCreatingCategory}
         className="w-full rounded bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isSaving
