@@ -115,6 +115,12 @@ export default function Page() {
   const [expenseFormError, setExpenseFormError] = useState<string | null>(null);
   const [isExpenseSaving, setIsExpenseSaving] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [editingIncome, setEditingIncome] = useState<IncomeItem | null>(null);
+  const [isIncomeSaving, setIsIncomeSaving] = useState(false);
+
+  const isEditingTransaction = editingExpense !== null || editingIncome !== null;
+
+  const isSavingTransaction = isExpenseSaving || isIncomeSaving;
   const [deletingTransaction, setDeletingTransaction] = useState<TransactionReference | null>(null);
   const [transactionDeleteError, setTransactionDeleteError] = useState<TransactionDeleteError | null>(null);
   const [operationType, setOperationType] = useState<"expense" | "income">("expense");
@@ -130,9 +136,9 @@ export default function Page() {
 
   const startExpenseEdit = (id: number) => {
     if (
-      isExpenseSaving ||
-      deletingTransaction !== null ||
-      editingExpense !== null
+      isEditingTransaction ||
+      isSavingTransaction ||
+      deletingTransaction !== null
     ) {
       return;
     }
@@ -177,7 +183,9 @@ export default function Page() {
       isExpenseSaving ||
       deletingTransaction !== null ||
       isCategoriesLoading ||
-      categoriesError !== null
+      categoriesError !== null ||
+      isIncomeSaving ||
+      editingIncome !== null
     ) {
       return;
     }
@@ -252,17 +260,53 @@ export default function Page() {
   };
 
 
-  const addIncome = async (income: IncomeCreate): Promise<void> => {
-    await apiFetch<IncomeItem>("/incomes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(income),
-    });
+  const startIncomeEdit = (id: number) => {
+    if (
+      isEditingTransaction ||
+      isSavingTransaction ||
+      deletingTransaction !== null
+    ) {
+      return;
+    }
 
-    setIsDashboardLoading(true);
-    setRefreshKey((key) => key + 1);
+    const income = incomes.find((item) => item.id === id);
+
+    if (!income) {
+      return;
+    }
+
+    setEditingIncome(income);
+    setOperationType("income");
+    setTransactionDeleteError(null);
+  };
+
+  const cancelIncomeEdit = () => {
+    if (!isIncomeSaving) {
+      setEditingIncome(null);
+    }
+  };
+
+  const saveIncome = async (income: IncomeCreate): Promise<void> => {
+    setIsIncomeSaving(true);
+
+    try {
+      await apiFetch<IncomeItem>(
+        editingIncome ? `/incomes/${editingIncome.id}` : "/incomes",
+        {
+          method: editingIncome ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(income),
+        },
+      );
+
+      setEditingIncome(null);
+      setIsDashboardLoading(true);
+      setRefreshKey((key) => key + 1);
+    } finally {
+      setIsIncomeSaving(false);
+    }
   };
 
 
@@ -284,9 +328,9 @@ export default function Page() {
     transaction: TransactionReference,
   ) => {
     if (
-      deletingTransaction !== null ||
-      isExpenseSaving ||
-      editingExpense !== null
+      isEditingTransaction ||
+      isSavingTransaction ||
+      deletingTransaction !== null
     ) {
       return;
     }
@@ -551,6 +595,7 @@ export default function Page() {
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700"
                     }`}
+                  disabled={isEditingTransaction || isSavingTransaction}
                 >
                   Expense
                 </button>
@@ -563,7 +608,7 @@ export default function Page() {
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700"
                     }`}
-                  disabled={editingExpense !== null || isExpenseSaving}
+                  disabled={isEditingTransaction || isSavingTransaction}
                 >
                   Income
                 </button>
@@ -599,7 +644,13 @@ export default function Page() {
               </div>
 
               <div hidden={operationType !== "income"}>
-                <IncomeForm onCreate={addIncome} />
+                <IncomeForm
+                  key={editingIncome ? `edit-${editingIncome.id}` : "new"}
+                  editingIncome={editingIncome}
+                  isSaving={isIncomeSaving}
+                  onSave={saveIncome}
+                  onCancelEdit={cancelIncomeEdit}
+                />
               </div>
 
 
@@ -614,7 +665,8 @@ export default function Page() {
                 deletingTransaction={deletingTransaction}
                 deleteError={transactionDeleteError}
                 onEditExpense={startExpenseEdit}
-                actionsDisabled={isExpenseSaving || editingExpense !== null}
+                actionsDisabled={isEditingTransaction || isSavingTransaction}
+                onEditIncome={startIncomeEdit}
               />
 
 

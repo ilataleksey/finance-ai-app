@@ -19,6 +19,7 @@ type TransactionListProps = {
   deletingTransaction: TransactionReference | null;
   deleteError: TransactionDeleteError | null;
   onEditExpense: (id: number) => void;
+  onEditIncome: (id: number) => void;
   actionsDisabled: boolean;
 };
 
@@ -41,6 +42,7 @@ export default function TransactionList({
   deletingTransaction,
   deleteError,
   onEditExpense,
+  onEditIncome,
   actionsDisabled,
 }: TransactionListProps) {
   return (
@@ -147,17 +149,21 @@ export default function TransactionList({
                   </div>
 
 
-                  {!isIncome && (
-                    <button
-                      type="button"
-                      onClick={() => onEditExpense(transaction.id)}
-                      disabled={actionsDisabled || deletingTransaction !== null}
-                      aria-label={`Edit expense: ${transaction.description}`}
-                      className="text-sm text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Edit
-                    </button>
-                  )}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isIncome
+                        ? onEditIncome(transaction.id)
+                        : onEditExpense(transaction.id)
+                    }
+                    aria-label={`Edit ${transaction.type}: ${transaction.description}`}
+                    disabled={actionsDisabled || deletingTransaction !== null}
+                    className="text-sm text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Edit
+                  </button>
+
 
 
                   <button

@@ -1,12 +1,15 @@
 import { useState } from "react";
 
 import { ApiError } from "@/services/api";
-import type { IncomeCreate } from "@/types/api";
+import type { IncomeCreate, IncomeItem } from "@/types/api";
 import { formatLocalDate } from "@/utils/dateRange";
 import IncomeSourceField from "@/components/IncomeSourceField";
 
 type IncomeFormProps = {
-  onCreate: (income: IncomeCreate) => Promise<void>;
+  editingIncome: IncomeItem | null;
+  isSaving: boolean;
+  onSave: (income: IncomeCreate) => Promise<void>;
+  onCancelEdit: () => void;
 };
 
 function getIncomeErrorMessage(error: unknown): string {
@@ -22,14 +25,18 @@ function getIncomeErrorMessage(error: unknown): string {
 
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return "Income source not found. Refresh the page and select an existing source.";
-    }
-    if (error.status === 422) {
-      return "Check the source, positive amount, and income date.";
-    }
+      const body = error.body;
 
-    if (error.status >= 500 && error.status <= 599) {
-      return "The server could not save the income. Try again later.";
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        "detail" in body &&
+        body.detail === "Income not found"
+      ) {
+        return "This income no longer exists. Cancel editing and refresh the page.";
+      }
+
+      return "Income source not found. Refresh the page and select an existing source.";
     }
 
     return "Could not save the income. Please try again.";
@@ -42,13 +49,24 @@ function getIncomeErrorMessage(error: unknown): string {
   return "Could not save the income. Please try again.";
 }
 
-export default function IncomeForm({ onCreate }: IncomeFormProps) {
-  const [sourceId, setSourceId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [createdAt, setCreatedAt] = useState(
-    () => formatLocalDate(new Date()),
+export default function IncomeForm({
+  editingIncome,
+  isSaving,
+  onSave,
+  onCancelEdit,
+}: IncomeFormProps) {
+  const [sourceId, setSourceId] = useState(
+    () => editingIncome ? String(editingIncome.source_id) : "",
   );
-  const [isSaving, setIsSaving] = useState(false);
+  const [amount, setAmount] = useState(
+    () => editingIncome ? String(editingIncome.amount) : "",
+  );
+  const [createdAt, setCreatedAt] = useState(
+    () =>
+      editingIncome?.created_at.split("T")[0] ??
+      formatLocalDate(new Date()),
+  );
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -77,28 +95,33 @@ export default function IncomeForm({ onCreate }: IncomeFormProps) {
       return;
     }
 
-    setIsSaving(true);
+    const savedDate =
+      editingIncome &&
+        createdAt === editingIncome.created_at.split("T")[0]
+        ? editingIncome.created_at
+        : createdAt;
 
     try {
-      await onCreate({
+      await onSave({
         source_id: Number(sourceId),
         amount: parsedAmount,
-        created_at: createdAt,
+        created_at: savedDate,
       });
 
-      setAmount("");
-      setSuccessMessage("Income saved.");
+      if (!editingIncome) {
+        setAmount("");
+        setSuccessMessage("Income saved.");
+      }
     } catch (error) {
-      console.error("Failed to create income", error);
       setErrorMessage(getIncomeErrorMessage(error));
-    } finally {
-      setIsSaving(false);
     }
   };
 
   return (
     <div className="rounded-xl bg-white p-4 shadow">
-      <h2 className="mb-4 text-lg font-semibold">Add income</h2>
+      <h2 className="mb-4 text-lg font-semibold">
+        {editingIncome ? "Edit income" : "Add income"}
+      </h2>
 
       {errorMessage && (
         <p
@@ -164,8 +187,24 @@ export default function IncomeForm({ onCreate }: IncomeFormProps) {
         disabled={isSaving}
         className="w-full rounded bg-blue-500 p-2 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSaving ? "Saving…" : "Add income"}
+        {isSaving
+          ? "Saving…"
+          : editingIncome
+            ? "Save changes"
+            : "Add income"
+        }
       </button>
+
+      {editingIncome && (
+        <button
+          type="button"
+          onClick={onCancelEdit}
+          disabled={isSaving}
+          className="mt-2 w-full rounded border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      )}
     </div>
   );
 }
