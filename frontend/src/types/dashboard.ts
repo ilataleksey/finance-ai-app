@@ -1,16 +1,9 @@
-export type Stats = {
-  total_expenses: number;
-  transactions_count: number;
-  avg_per_day: number;
-  top_category: string;
-};
-
-export type Balance = {
-  balance: number;
-};
+import type { Balance, Stats } from "@/types/api";
 
 export type DashboardCardProps = {
   stats: Stats | null;
   balance: Balance | null;
+  incomeForPeriod: number;
+  isLoading: boolean;
   formatCurrency: (value: number) => string;
 };

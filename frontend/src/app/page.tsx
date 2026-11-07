@@ -535,6 +535,12 @@ export default function Page() {
   });
 
 
+  const incomeForPeriod = incomes.reduce(
+    (total, income) => total + income.amount,
+    0,
+  );
+
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <AppNavigation />
@@ -554,6 +560,8 @@ export default function Page() {
           <DashboardCards
             stats={stats}
             balance={balanceData}
+            incomeForPeriod={incomeForPeriod}
+            isLoading={isDashboardLoading}
             formatCurrency={formatCurrency}
           />
 

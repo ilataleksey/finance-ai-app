@@ -58,7 +58,7 @@ export type Stats = {
     total_expenses: number;
     transactions_count: number;
     avg_per_day: number;
-    top_category: string;
+    top_category: string | null;
 };
 
 export type Balance = {
