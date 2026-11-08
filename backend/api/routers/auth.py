@@ -5,6 +5,7 @@ from fastapi.routing import APIRoute
 from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from api.authentication import create_access_token, get_current_user, unauthorized
 
 import models
 import schemas
@@ -43,6 +44,7 @@ router = APIRouter(
 )
 
 password_hasher = PasswordHash.recommended()
+DUMMY_PASSWORD_HASH = password_hasher.hash("unused-login-placeholder")
 
 
 @router.post("/register", response_model=schemas.UserResponse, status_code=201)
@@ -89,4 +91,36 @@ def register_user(
         raise
 
     db.refresh(user)
+    return user
+
+
+@router.post("/login", response_model=schemas.TokenResponse)
+def login(
+    payload: schemas.UserLogin,
+    db: Session = Depends(get_db),
+):
+    email = str(payload.email).lower()
+
+    user = db.query(models.User).filter(
+        models.User.email == email
+    ).first()
+
+    stored_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+    password_is_valid = password_hasher.verify(
+        payload.password.get_secret_value(),
+        stored_hash,
+    )
+
+    if user is None or not password_is_valid:
+        raise unauthorized()
+
+    return schemas.TokenResponse(
+        access_token=create_access_token(user.id),
+    )
+
+
+@router.get("/me", response_model=schemas.UserResponse)
+def read_current_user(
+    user: models.User = Depends(get_current_user),
+):
     return user
