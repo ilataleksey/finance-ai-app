@@ -3,6 +3,23 @@ from sqlalchemy.orm import relationship
 from datetime import datetime, UTC
 from database import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_users_email"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(254), nullable=False)
+    password_hash = Column(String, nullable=False)
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
