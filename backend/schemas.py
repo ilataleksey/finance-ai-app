@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, SecretStr
 from datetime import datetime
 from typing import Optional
 
@@ -128,4 +128,17 @@ class ExpenseUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     amount: float = Field(gt=0, allow_inf_nan=False)
     category_id: int = Field(gt=0)
+    created_at: datetime
+
+
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: SecretStr = Field(min_length=15, max_length=128)
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: EmailStr
     created_at: datetime

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
 from database import engine
 from dependencies import get_db
-from api.routers import expenses, incomes, income_sources
+from api.routers import expenses, incomes, income_sources, auth
 from typing import List
 from datetime import datetime
 import schemas
@@ -41,6 +41,7 @@ models.Base.metadata.create_all(bind=engine)
 app.include_router(expenses.router)
 app.include_router(income_sources.router)
 app.include_router(incomes.router)
+app.include_router(auth.router)
 
 
 @app.post("/categories", response_model=schemas.CategoryResponse)
