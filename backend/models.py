@@ -23,6 +23,12 @@ class User(Base):
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_categories_user_id_users"),
+        nullable=True,
+        index=True,
+    )
     name = Column(String, unique=True)
 
     expenses = relationship("Expense", back_populates="category")
@@ -33,6 +39,12 @@ class Expense(Base):
     __tablename__ = "expenses"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_expenses_user_id_users"),
+        nullable=True,
+        index=True,
+    )
     title = Column(String)
     amount = Column(Float)
 
@@ -47,6 +59,12 @@ class IncomeSource(Base):
     __tablename__ = "income_sources"
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_income_sources_user_id_users"),
+        nullable=True,
+        index=True,
+    )
     name = Column(String(100), nullable=False)
     normalized_name = Column(
         String,
@@ -60,6 +78,12 @@ class Income(Base):
     __tablename__ = "incomes"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_incomes_user_id_users"),
+        nullable=True,
+        index=True,
+    )
 
     source_id = Column(
         Integer,
@@ -89,6 +113,12 @@ class Budget(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", name="fk_budgets_user_id_users"),
+        nullable=True,
+        index=True,
+    )
     category_id = Column(
         Integer,
         ForeignKey("categories.id"),
